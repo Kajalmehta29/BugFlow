@@ -1,0 +1,20 @@
+# Maven build output
+target/
+
+# IDE configurations
+.idea/
+*.iml
+*.iws
+.settings/
+.classpath
+.project
+.factorypath
+.metadata/
+
+# OS specific files
+.DS_Store
+
+# Local application logs and properties
+*.log
+.env
+.env.local

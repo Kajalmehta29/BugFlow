@@ -1,0 +1,118 @@
+.user-management-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+}
+
+.table-loader-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  gap: 12px;
+  color: var(--text-secondary);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.employee-table th {
+  padding: 16px 20px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.01);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.employee-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.employee-row {
+  transition: var(--transition-fast);
+}
+
+.employee-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.emp-id {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.emp-username {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.current-user-tag {
+  font-size: 11px;
+  color: var(--color-primary);
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.emp-email {
+  color: var(--text-secondary);
+}
+
+/* Role tags */
+.emp-role-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.role-admin { background: rgba(139, 92, 246, 0.12); color: #A78BFA; border: 1px solid rgba(139, 92, 246, 0.2); }
+.role-project_manager { background: rgba(59, 130, 246, 0.12); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.2); }
+.role-developer { background: rgba(16, 185, 129, 0.12); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.2); }
+.role-tester { background: rgba(245, 158, 11, 0.12); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.2); }
+
+/* Table action buttons */
+.employee-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-table-action {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-edit { color: var(--text-secondary); }
+.action-edit:hover { background: rgba(255, 255, 255, 0.05); color: var(--color-primary); }
+
+.action-delete { color: var(--text-muted); }
+.action-delete:hover { background: rgba(239, 68, 68, 0.1); color: var(--color-danger); }
+
+.text-right {
+  text-align: right;
+}

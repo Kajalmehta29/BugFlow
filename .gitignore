@@ -1,0 +1,22 @@
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+*.sublime-project
+*.sublime-workspace
+
+# Build and Dependency Folders
+node_modules/
+dist/
+target/
+
+# Local Environment/Logs
+*.log
+.env
+.env.local
+.env.*.local
