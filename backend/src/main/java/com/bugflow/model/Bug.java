@@ -57,6 +57,9 @@ public class Bug {
     @JoinColumn(name = "sprint_id")
     private Sprint sprint;
 
+    @OneToMany(mappedBy = "bug", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private java.util.List<Attachment> attachments = new java.util.ArrayList<>();
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -101,6 +104,14 @@ public class Bug {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public java.util.List<Attachment> getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(java.util.List<Attachment> attachments) {
+        this.attachments = attachments;
     }
 
     public String getTitle() {

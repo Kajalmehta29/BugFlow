@@ -82,6 +82,7 @@
   padding: 16px 12px;
   flex-shrink: 0;
   transition: var(--transition-fast);
+  border-top: 3px solid var(--border-color);
 }
 
 .board-column.drag-over {
@@ -127,18 +128,19 @@
 
 /* Bug Cards Design */
 .bug-card {
-  background: rgba(14, 20, 38, 0.45);
+  background: var(--bg-card);
   padding: 16px;
   border-radius: 12px;
   cursor: grab;
   transition: var(--transition-smooth);
+  border: 1px solid var(--border-color);
 }
 
 .bug-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-  background: rgba(14, 20, 38, 0.7);
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-premium);
+  background: var(--bg-card-hover);
 }
 
 .bug-card:active {
@@ -213,4 +215,87 @@
   padding: 1px 6px;
   border-radius: 4px;
   text-transform: uppercase;
+}
+
+.bug-card-cover {
+  width: calc(100% + 32px);
+  margin-left: -16px;
+  margin-top: -16px;
+  margin-right: -16px;
+  margin-bottom: 12px;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  height: 120px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bug-card-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.bug-card:hover .bug-card-cover-image {
+  transform: scale(1.04);
+}
+
+/* Subtle Column Status Accents */
+.board-column.column-open {
+  border-top-color: #64748B;
+}
+.board-column.column-assigned {
+  border-top-color: var(--color-primary); /* Teal brand theme */
+}
+.board-column.column-in_progress {
+  border-top-color: var(--color-secondary); /* Ochre/Amber brand theme */
+}
+.board-column.column-code_review {
+  border-top-color: #8b5cf6; /* Purple/Violet */
+}
+.board-column.column-testing {
+  border-top-color: #06b6d4; /* Cyan */
+}
+.board-column.column-resolved {
+  border-top-color: var(--color-success); /* Success Green */
+}
+.board-column.column-closed {
+  border-top-color: #475569; /* Muted Slate */
+}
+
+/* Subtle priority card tints */
+.bug-card.priority-low {
+  background: rgba(16, 185, 129, 0.035);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+.bug-card.priority-low:hover {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.32);
+}
+
+.bug-card.priority-medium {
+  background: rgba(6, 182, 212, 0.035);
+  border-color: rgba(6, 182, 212, 0.15);
+}
+.bug-card.priority-medium:hover {
+  background: rgba(6, 182, 212, 0.06);
+  border-color: rgba(6, 182, 212, 0.32);
+}
+
+.bug-card.priority-high {
+  background: rgba(245, 158, 11, 0.035);
+  border-color: rgba(245, 158, 11, 0.15);
+}
+.bug-card.priority-high:hover {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.32);
+}
+
+.bug-card.priority-critical {
+  background: rgba(239, 68, 68, 0.035);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+.bug-card.priority-critical:hover {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.32);
 }

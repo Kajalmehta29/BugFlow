@@ -18,6 +18,7 @@ public class BugResponse {
     private SprintResponse sprint;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private java.util.List<AttachmentResponse> attachments;
 
     public BugResponse() {
     }
@@ -44,7 +45,7 @@ public class BugResponse {
             return null;
         }
 
-        return new BugResponse(
+        BugResponse response = new BugResponse(
                 bug.getId(),
                 bug.getTitle(),
                 bug.getDescription(),
@@ -58,6 +59,14 @@ public class BugResponse {
                 bug.getCreatedAt(),
                 bug.getUpdatedAt()
         );
+
+        if (bug.getAttachments() != null) {
+            response.setAttachments(bug.getAttachments().stream()
+                    .map(AttachmentResponse::fromAttachment)
+                    .collect(java.util.stream.Collectors.toList()));
+        }
+
+        return response;
     }
 
     // Getters and Setters
@@ -155,5 +164,13 @@ public class BugResponse {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public java.util.List<AttachmentResponse> getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(java.util.List<AttachmentResponse> attachments) {
+        this.attachments = attachments;
     }
 }

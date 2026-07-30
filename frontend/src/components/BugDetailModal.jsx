@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
 import { api } from '../services/api';
+import AttachmentPreviewModal from './AttachmentPreviewModal';
 import './BugDetailModal.css';
 import { 
   X, 
@@ -33,6 +34,7 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
   const [fileToUpload, setFileToUpload] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [previewAttachment, setPreviewAttachment] = useState(null);
 
   // Editing states
   const [isEditing, setIsEditing] = useState(false);
@@ -453,6 +455,7 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
                         <input 
                           id="bug-file-input"
                           type="file" 
+                          accept="image/*,application/pdf"
                           onChange={handleFileChange}
                           required
                         />
@@ -472,7 +475,7 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
                       ) : (
                         attachments.map(att => (
                           <div key={att.id} className="attachment-item">
-                            <div className="attachment-details">
+                            <div className="attachment-details" onClick={() => setPreviewAttachment(att)} style={{ cursor: 'pointer' }}>
                               <FileText size={16} className="attachment-type-icon" />
                               <span className="attachment-filename">{att.filename}</span>
                               <span className="attachment-type-label">{att.fileType}</span>
@@ -595,16 +598,29 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
 
                 <div className="meta-detail-row">
                   <span className="meta-label">Assignee:</span>
-                  <div className="meta-value">
+                  <div className="meta-value" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {canEdit ? (
-                      <select value={bug.assignee ? bug.assignee.id : ''} onChange={(e) => handleAssigneeChange(e.target.value)}>
-                        <option value="">Unassigned</option>
-                        {projectMembers.map(m => (
-                          <option key={m.id} value={m.id}>{m.username}</option>
-                        ))}
-                      </select>
+                      <>
+                        <select value={bug.assignee ? bug.assignee.id : ''} onChange={(e) => handleAssigneeChange(e.target.value)}>
+                          <option value="">Unassigned</option>
+                          {projectMembers.map(m => (
+                            <option key={m.id} value={m.id}>{m.username}</option>
+                          ))}
+                        </select>
+                        {bug.assignee && (
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                            Initially assigned by {bug.reporter.username}
+                          </span>
+                        )}
+                      </>
                     ) : (
-                      <span className="meta-user">{bug.assignee ? bug.assignee.username : 'Unassigned'}</span>
+                      <span className="meta-user">
+                        {bug.assignee ? (
+                          `${bug.assignee.username} (Assigned by ${bug.reporter.username})`
+                        ) : (
+                          'Unassigned'
+                        )}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -654,6 +670,12 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
           </div>
         </div>
       </div>
+      {previewAttachment && (
+        <AttachmentPreviewModal 
+          attachment={previewAttachment} 
+          onClose={() => setPreviewAttachment(null)} 
+        />
+      )}
     </div>
   );
 }

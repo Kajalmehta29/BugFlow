@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { api } from '../services/api';
 import BugDetailModal from '../components/BugDetailModal';
+import AuthenticatedImage from '../components/AuthenticatedImage';
+import AttachmentPreviewModal from '../components/AttachmentPreviewModal';
 import './Kanban.css';
 import { 
   Search, 
@@ -48,6 +50,8 @@ export default function Kanban() {
   const [assigneeId, setAssigneeId] = useState('');
   const [sprintId, setSprintId] = useState('');
   const [createError, setCreateError] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [previewAttachment, setPreviewAttachment] = useState(null);
 
   const loadBoardData = async () => {
     if (!activeProject) return;
@@ -98,10 +102,8 @@ export default function Kanban() {
     const params = new URLSearchParams(location.search);
     if (params.get('report') === 'true') {
       setShowCreateModal(true);
-      // Clean query parameters
-      navigate('/board', { replace: true });
     }
-  }, [location, navigate]);
+  }, [location]);
 
   // Drag and Drop Logic
   const handleDragStart = (e, bugId) => {
@@ -151,11 +153,19 @@ export default function Kanban() {
     }
   };
 
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    const params = new URLSearchParams(location.search);
+    if (params.get('report') === 'true') {
+      navigate('/board', { replace: true });
+    }
+  };
+
   const handleCreateBug = async (e) => {
     e.preventDefault();
     setCreateError('');
     try {
-      await api.createBug(
+      const newBug = await api.createBug(
         activeProject.id,
         title,
         description,
@@ -164,13 +174,19 @@ export default function Kanban() {
         assigneeId || null,
         sprintId || null
       );
+
+      if (imageFile) {
+        await api.uploadAttachment(newBug.id, imageFile);
+      }
+
       setTitle('');
       setDescription('');
       setPriority('MEDIUM');
       setSeverity('MEDIUM');
       setAssigneeId('');
       setSprintId('');
-      setShowCreateModal(false);
+      setImageFile(null);
+      closeCreateModal();
       await loadBoardData();
     } catch (err) {
       setCreateError(err.message || 'Failed to report bug');
@@ -207,10 +223,6 @@ export default function Kanban() {
           <h1>Kanban Board</h1>
           <p>Drag and drop cards to transition bug statuses</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-          <Plus size={18} />
-          <span>Report Bug</span>
-        </button>
       </div>
 
       {/* SEARCH AND FILTERS TOOLBAR */}
@@ -281,7 +293,7 @@ export default function Kanban() {
               return (
                 <div 
                   key={status}
-                  className="board-column glass-panel"
+                  className={`board-column glass-panel column-${status.toLowerCase()}`}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, status)}
@@ -292,15 +304,33 @@ export default function Kanban() {
                   </div>
 
                   <div className="column-cards-list">
-                    {statusBugs.map(bug => (
-                      <div 
-                        key={bug.id}
-                        className="bug-card glass-panel"
-                        draggable={true}
-                        onDragStart={(e) => handleDragStart(e, bug.id)}
-                        onDragEnd={handleDragEnd}
-                        onClick={() => setSelectedBugId(bug.id)}
-                      >
+                    {statusBugs.map(bug => {
+                      const imageAttachment = bug.attachments?.find(att => att.fileType.startsWith('image/'));
+                      return (
+                        <div 
+                          key={bug.id}
+                          className={`bug-card glass-panel priority-${bug.priority.toLowerCase()}`}
+                          draggable={true}
+                          onDragStart={(e) => handleDragStart(e, bug.id)}
+                          onDragEnd={handleDragEnd}
+                          onClick={() => setSelectedBugId(bug.id)}
+                        >
+                          {imageAttachment && (
+                            <div 
+                              className="bug-card-cover"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewAttachment(imageAttachment);
+                              }}
+                              title="Click to preview screenshot"
+                            >
+                              <AuthenticatedImage 
+                                attachmentId={imageAttachment.id} 
+                                alt={bug.title} 
+                                className="bug-card-cover-image" 
+                              />
+                            </div>
+                          )}
                         <div className="bug-card-top">
                           <span className={`badge ${getPriorityBadgeClass(bug.priority)}`}>
                             {bug.priority}
@@ -321,7 +351,8 @@ export default function Kanban() {
                           )}
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 </div>
               );
@@ -336,7 +367,7 @@ export default function Kanban() {
           <div className="modal-content glass-panel animate-fade-in">
             <div className="modal-header">
               <h2>Report New Bug</h2>
-              <button className="btn-close" onClick={() => setShowCreateModal(false)}>
+              <button className="btn-close" onClick={closeCreateModal}>
                 <X size={20} />
               </button>
             </div>
@@ -414,8 +445,19 @@ export default function Kanban() {
                 </div>
               </div>
 
+              <div className="form-group">
+                <label htmlFor="bug-image">Attach Screenshot / PDF (Optional)</label>
+                <input 
+                  id="bug-image"
+                  type="file" 
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setImageFile(e.target.files[0])}
+                  style={{ padding: '8px 0' }}
+                />
+              </div>
+
               <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>
+                <button type="button" className="btn btn-secondary" onClick={closeCreateModal}>
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
@@ -436,6 +478,13 @@ export default function Kanban() {
           onBugUpdated={handleBugUpdated}
           projectMembers={projectMembers}
           sprints={sprints}
+        />
+      )}
+
+      {previewAttachment && (
+        <AttachmentPreviewModal 
+          attachment={previewAttachment} 
+          onClose={() => setPreviewAttachment(null)} 
         />
       )}
     </div>

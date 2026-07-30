@@ -518,7 +518,7 @@ public class BugServiceImpl implements BugService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "bugDetails", key = "#bugId")
+    @CacheEvict(value = {"bugDetails", "bugSearch"}, allEntries = true)
     public AttachmentResponse addAttachment(Long bugId, MultipartFile file, String currentUsername) {
         Bug bug = bugRepository.findById(bugId)
                 .orElseThrow(() -> new ResourceNotFoundException("Bug not found with ID: " + bugId));

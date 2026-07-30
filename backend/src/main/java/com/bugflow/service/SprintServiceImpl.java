@@ -5,9 +5,11 @@ import com.bugflow.dto.SprintResponse;
 import com.bugflow.exception.BadRequestException;
 import com.bugflow.exception.ResourceNotFoundException;
 import com.bugflow.model.*;
+import com.bugflow.repository.BugRepository;
 import com.bugflow.repository.ProjectRepository;
 import com.bugflow.repository.SprintRepository;
 import com.bugflow.repository.UserRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,11 +22,16 @@ public class SprintServiceImpl implements SprintService {
     private final SprintRepository sprintRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final BugRepository bugRepository;
 
-    public SprintServiceImpl(SprintRepository sprintRepository, ProjectRepository projectRepository, UserRepository userRepository) {
+    public SprintServiceImpl(SprintRepository sprintRepository, 
+                             ProjectRepository projectRepository, 
+                             UserRepository userRepository,
+                             BugRepository bugRepository) {
         this.sprintRepository = sprintRepository;
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
+        this.bugRepository = bugRepository;
     }
 
     private void validateManagerOrAdmin(Project project, User user) {
@@ -80,6 +87,7 @@ public class SprintServiceImpl implements SprintService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"bugSearch", "dashboardStats", "bugDetails"}, allEntries = true)
     public SprintResponse updateSprintStatus(Long sprintId, String status, String currentUsername) {
         Sprint sprint = sprintRepository.findById(sprintId)
                 .orElseThrow(() -> new ResourceNotFoundException("Sprint not found with ID: " + sprintId));
@@ -97,6 +105,29 @@ public class SprintServiceImpl implements SprintService {
         }
 
         sprint.setStatus(sprintStatus);
+
+        // If sprint is started (ACTIVE), transition unfinished bugs (OPEN/ASSIGNED) to IN_PROGRESS
+        if (sprintStatus == SprintStatus.ACTIVE) {
+            List<Bug> sprintBugs = bugRepository.findBySprintId(sprintId);
+            for (Bug bug : sprintBugs) {
+                if (bug.getStatus() == BugStatus.OPEN || bug.getStatus() == BugStatus.ASSIGNED) {
+                    bug.setStatus(BugStatus.IN_PROGRESS);
+                    bugRepository.save(bug);
+                }
+            }
+        }
+
+        // If sprint is marked as COMPLETED, automatically transition all unfinished bugs to RESOLVED
+        if (sprintStatus == SprintStatus.COMPLETED) {
+            List<Bug> sprintBugs = bugRepository.findBySprintId(sprintId);
+            for (Bug bug : sprintBugs) {
+                if (bug.getStatus() != BugStatus.RESOLVED && bug.getStatus() != BugStatus.CLOSED) {
+                    bug.setStatus(BugStatus.RESOLVED);
+                    bugRepository.save(bug);
+                }
+            }
+        }
+
         Sprint savedSprint = sprintRepository.save(sprint);
         return SprintResponse.fromSprint(savedSprint);
     }

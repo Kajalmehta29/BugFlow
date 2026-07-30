@@ -1,6 +1,6 @@
 # Maven build output
 target/
-
+.uploads/ 
 # IDE configurations
 .idea/
 *.iml

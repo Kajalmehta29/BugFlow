@@ -89,6 +89,7 @@ export default function Dashboard() {
 
   const activeSprint = sprints.find(s => s.status === 'ACTIVE');
   const plannedSprints = sprints.filter(s => s.status === 'PLANNED');
+  const completedSprints = sprints.filter(s => s.status === 'COMPLETED');
 
   const openCount = stats ? (stats.bugsByStatus['OPEN'] || 0) + (stats.bugsByStatus['ASSIGNED'] || 0) + (stats.bugsByStatus['IN_PROGRESS'] || 0) + (stats.bugsByStatus['CODE_REVIEW'] || 0) + (stats.bugsByStatus['TESTING'] || 0) : 0;
   const resolvedCount = stats ? (stats.bugsByStatus['RESOLVED'] || 0) + (stats.bugsByStatus['CLOSED'] || 0) : 0;
@@ -259,6 +260,26 @@ export default function Dashboard() {
                       <span>Start</span>
                     </button>
                   )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Completed sprints list */}
+        {completedSprints.length > 0 && (
+          <div className="completed-sprints-list">
+            <h4>Sprint History / Completed Sprints ({completedSprints.length})</h4>
+            <div className="completed-grid">
+              {completedSprints.map(s => (
+                <div key={s.id} className="completed-item">
+                  <div className="completed-details">
+                    <h5>{s.name}</h5>
+                    <span className="completed-dates">
+                      {s.startDate ? new Date(s.startDate).toLocaleDateString() : 'No date'} - {s.endDate ? new Date(s.endDate).toLocaleDateString() : 'No date'}
+                    </span>
+                  </div>
+                  <span className="sprint-status-badge completed-badge">Completed</span>
                 </div>
               ))}
             </div>
