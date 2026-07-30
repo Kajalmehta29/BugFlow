@@ -5,6 +5,7 @@ import com.bugflow.dto.ProjectResponse;
 import com.bugflow.exception.BadRequestException;
 import com.bugflow.exception.ResourceNotFoundException;
 import com.bugflow.model.Project;
+import com.bugflow.model.ProjectStatus;
 import com.bugflow.model.User;
 import com.bugflow.model.UserRole;
 import com.bugflow.repository.ProjectRepository;
@@ -144,6 +145,53 @@ public class ProjectServiceImpl implements ProjectService {
         }
 
         project.getMembers().remove(userToRemove);
+        Project savedProject = projectRepository.save(project);
+        return ProjectResponse.fromProject(savedProject);
+    }
+
+    @Override
+    @Transactional
+    public ProjectResponse updateProjectStatus(Long projectId, String status, String currentUsername) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + projectId));
+
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + currentUsername));
+
+        if (currentUser.getRole() != UserRole.ADMIN && !project.getManager().getId().equals(currentUser.getId())) {
+            throw new BadRequestException("Access denied: Only the project manager or an Admin can manage project status");
+        }
+
+        ProjectStatus projectStatus;
+        try {
+            projectStatus = ProjectStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new BadRequestException("Invalid status: Allowed values are ACTIVE, COMPLETED");
+        }
+
+        project.setStatus(projectStatus);
+        Project savedProject = projectRepository.save(project);
+        return ProjectResponse.fromProject(savedProject);
+    }
+
+    @Override
+    @Transactional
+    public ProjectResponse updateProject(Long projectId, com.bugflow.dto.ProjectUpdateRequest request, String currentUsername) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + projectId));
+
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + currentUsername));
+
+        if (currentUser.getRole() != UserRole.ADMIN && !project.getManager().getId().equals(currentUser.getId())) {
+            throw new BadRequestException("Access denied: Only the project manager or an Admin can manage project settings");
+        }
+
+        project.setName(request.getName());
+        project.setDescription(request.getDescription());
+        project.setDomainUrl(request.getDomainUrl());
+        project.setResourceLinks(request.getResourceLinks());
+
         Project savedProject = projectRepository.save(project);
         return ProjectResponse.fromProject(savedProject);
     }

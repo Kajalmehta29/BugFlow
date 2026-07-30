@@ -14,12 +14,15 @@ public class ProjectResponse {
     private String description;
     private UserResponse manager;
     private Set<UserResponse> members;
+    private String status;
     private LocalDateTime createdAt;
+    private String domainUrl;
+    private String resourceLinks;
 
     public ProjectResponse() {
     }
 
-    public ProjectResponse(Long id, String name, String key, String description, UserResponse manager, Set<UserResponse> members, LocalDateTime createdAt) {
+    public ProjectResponse(Long id, String name, String key, String description, UserResponse manager, Set<UserResponse> members, LocalDateTime createdAt, String status, String domainUrl, String resourceLinks) {
         this.id = id;
         this.name = name;
         this.key = key;
@@ -27,6 +30,9 @@ public class ProjectResponse {
         this.manager = manager;
         this.members = members;
         this.createdAt = createdAt;
+        this.status = status;
+        this.domainUrl = domainUrl;
+        this.resourceLinks = resourceLinks;
     }
 
     public static ProjectResponse fromProject(Project project) {
@@ -48,7 +54,10 @@ public class ProjectResponse {
                 project.getDescription(),
                 UserResponse.fromUser(project.getManager()),
                 memberResponses,
-                project.getCreatedAt()
+                project.getCreatedAt(),
+                project.getStatus() != null ? project.getStatus().name() : "ACTIVE",
+                project.getDomainUrl(),
+                project.getResourceLinks()
         );
     }
 
@@ -107,5 +116,29 @@ public class ProjectResponse {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getDomainUrl() {
+        return domainUrl;
+    }
+
+    public void setDomainUrl(String domainUrl) {
+        this.domainUrl = domainUrl;
+    }
+
+    public String getResourceLinks() {
+        return resourceLinks;
+    }
+
+    public void setResourceLinks(String resourceLinks) {
+        this.resourceLinks = resourceLinks;
     }
 }

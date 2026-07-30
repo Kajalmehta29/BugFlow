@@ -11,4 +11,6 @@ public interface ProjectService {
     ProjectResponse getProjectById(Long id, String currentUsername);
     ProjectResponse addMemberToProject(Long projectId, Long userId, String currentUsername);
     ProjectResponse removeMemberFromProject(Long projectId, Long userId, String currentUsername);
+    ProjectResponse updateProjectStatus(Long projectId, String status, String currentUsername);
+    ProjectResponse updateProject(Long projectId, com.bugflow.dto.ProjectUpdateRequest request, String currentUsername);
 }

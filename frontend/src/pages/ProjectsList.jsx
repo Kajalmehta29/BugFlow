@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { api } from '../services/api';
 import './ProjectsList.css';
-import { FolderKanban, Plus, UserCheck, Trash2, X, ArrowRight } from 'lucide-react';
+import { FolderKanban, Plus, UserCheck, Trash2, X, ArrowRight, CheckCircle } from 'lucide-react';
 
 export default function ProjectsList() {
   const { user, projects, selectProject, refreshProjects } = useAuth();
@@ -118,19 +118,57 @@ export default function ProjectsList() {
           {projects.map((proj) => (
             <div key={proj.id} className="project-card glass-panel glass-panel-hover" onClick={() => handleSelectProject(proj)}>
               <div className="project-card-header">
-                <span className="project-card-key">{proj.key}</span>
-                {isPMorAdmin(proj) && (
-                  <button 
-                    className="btn-manage-members" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openMembersModal(proj);
-                    }}
-                    title="Manage Project Members"
-                  >
-                    <UserCheck size={18} />
-                  </button>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="project-card-key">{proj.key}</span>
+                  <span className={`project-status-tag status-${(proj.status || 'ACTIVE').toLowerCase()}`}>
+                    {proj.status || 'ACTIVE'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isPMorAdmin(proj) && (
+                    <button 
+                      className="btn-manage-members" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMembersModal(proj);
+                      }}
+                      title="Manage Project Members"
+                    >
+                      <UserCheck size={18} />
+                    </button>
+                  )}
+                  {isPMorAdmin(proj) && proj.status !== 'COMPLETED' && (
+                    <button 
+                      className="btn-close-project" 
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Are you sure you want to complete and close the project "${proj.name}"?`)) {
+                          try {
+                            await api.updateProjectStatus(proj.id, 'COMPLETED');
+                            await refreshProjects();
+                          } catch (err) {
+                            alert(err.message || 'Failed to complete project');
+                          }
+                        }
+                      }}
+                      title="Complete/Close Project"
+                      style={{
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        border: 'none',
+                        color: 'var(--color-success)',
+                        cursor: 'pointer',
+                        padding: '6px',
+                        borderRadius: '6px',
+                        transition: 'var(--transition-fast)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <CheckCircle size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="project-card-body">

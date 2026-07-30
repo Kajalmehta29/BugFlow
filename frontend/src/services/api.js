@@ -106,6 +106,19 @@ export const api = {
       headers: getHeaders()
     }),
 
+  updateProjectStatus: (projectId, status) =>
+    request(`/projects/${projectId}/status?status=${status}`, {
+      method: 'PUT',
+      headers: getHeaders()
+    }),
+
+  updateProject: (projectId, data) =>
+    request(`/projects/${projectId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    }),
+
   // Sprints
   getSprints: (projectId) =>
     request(`/projects/${projectId}/sprints`, {

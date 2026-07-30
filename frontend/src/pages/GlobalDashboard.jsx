@@ -210,6 +210,8 @@ export default function GlobalDashboard() {
     return user.role === 'ADMIN' || proj.manager.id === user.id;
   };
 
+  const activeProjects = projects.filter(p => p.status === 'ACTIVE' || !p.status);
+
   return (
     <div className="global-dashboard-page">
       <div className="page-header animate-fade-in">
@@ -255,7 +257,7 @@ export default function GlobalDashboard() {
       {/* PROJECTS SECTION */}
       <div className="global-dashboard-section animate-fade-in">
         <div className="section-title-bar">
-          <h2>Active Projects ({projects.length})</h2>
+          <h2>Active Projects ({activeProjects.length})</h2>
           {isPMorAdmin && (
             <button className="btn btn-primary btn-small" onClick={() => setShowCreateProjModal(true)}>
               <Plus size={16} />
@@ -264,14 +266,14 @@ export default function GlobalDashboard() {
           )}
         </div>
 
-        {projects.length === 0 ? (
+        {activeProjects.length === 0 ? (
           <div className="empty-section glass-panel">
             <FolderKanban size={36} className="empty-icon" />
-            <p>No projects registered in the workspace yet.</p>
+            <p>No active projects registered in the workspace yet.</p>
           </div>
         ) : (
           <div className="global-projects-grid">
-            {projects.map((proj) => (
+            {activeProjects.map((proj) => (
               <div key={proj.id} className="global-project-card glass-panel glass-panel-hover" onClick={() => handleSelectProject(proj)}>
                 <div className="proj-card-top">
                   <span className="proj-key">{proj.key}</span>

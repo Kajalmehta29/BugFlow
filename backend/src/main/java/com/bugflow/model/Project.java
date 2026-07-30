@@ -42,12 +42,27 @@ public class Project {
     )
     private Set<User> members = new HashSet<>();
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true, length = 20)
+    private ProjectStatus status = ProjectStatus.ACTIVE;
+
+    @Size(max = 500)
+    @Column(name = "domain_url", length = 500)
+    private String domainUrl;
+
+    @Size(max = 2000)
+    @Column(name = "resource_links", length = 2000)
+    private String resourceLinks;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = ProjectStatus.ACTIVE;
+        }
     }
 
     // Constructors
@@ -64,6 +79,7 @@ public class Project {
             this.members = members;
         }
         this.createdAt = createdAt;
+        this.status = ProjectStatus.ACTIVE;
     }
 
     // Getters and Setters
@@ -121,6 +137,30 @@ public class Project {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public ProjectStatus getStatus() {
+        return status != null ? status : ProjectStatus.ACTIVE;
+    }
+
+    public void setStatus(ProjectStatus status) {
+        this.status = status;
+    }
+
+    public String getDomainUrl() {
+        return domainUrl;
+    }
+
+    public void setDomainUrl(String domainUrl) {
+        this.domainUrl = domainUrl;
+    }
+
+    public String getResourceLinks() {
+        return resourceLinks;
+    }
+
+    public void setResourceLinks(String resourceLinks) {
+        this.resourceLinks = resourceLinks;
     }
 
     @Override

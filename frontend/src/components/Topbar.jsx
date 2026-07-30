@@ -10,10 +10,10 @@ export default function Topbar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  
+
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('theme');
-    return saved || 'light';
+    return saved || 'dark';
   });
 
   useEffect(() => {
@@ -77,8 +77,8 @@ export default function Topbar() {
     <div className="topbar">
       <div className="topbar-actions">
         {/* Theme Toggle Button */}
-        <button 
-          className="btn-theme-toggle" 
+        <button
+          className="btn-theme-toggle"
           onClick={toggleTheme}
           aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
           title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
@@ -88,15 +88,15 @@ export default function Topbar() {
 
         {/* Notifications Trigger */}
         <div className="notification-wrapper">
-          <button 
-            className={`btn-notification ${showNotifications ? 'active' : ''}`} 
+          <button
+            className={`btn-notification ${showNotifications ? 'active' : ''}`}
             onClick={toggleNotifications}
             aria-label="View notifications"
           >
             <Bell size={20} />
             {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
           </button>
-          
+
           {showNotifications && (
             <div className="notification-tray glass-panel animate-fade-in">
               <div className="tray-header">
@@ -110,7 +110,7 @@ export default function Topbar() {
                   </button>
                 </div>
               </div>
-              
+
               <div className="tray-body">
                 {notifications.length === 0 ? (
                   <div className="empty-notifications">

@@ -57,4 +57,20 @@ public class ProjectController {
         ProjectResponse response = projectService.removeMemberFromProject(id, userId, userDetails.getUsername());
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<ProjectResponse> updateProjectStatus(@PathVariable Long id,
+                                                               @RequestParam String status,
+                                                               @AuthenticationPrincipal UserDetails userDetails) {
+        ProjectResponse response = projectService.updateProjectStatus(id, status, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long id,
+                                                         @Valid @RequestBody com.bugflow.dto.ProjectUpdateRequest request,
+                                                         @AuthenticationPrincipal UserDetails userDetails) {
+        ProjectResponse response = projectService.updateProject(id, request, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
 }

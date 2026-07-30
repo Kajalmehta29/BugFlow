@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { useAuth } from '../App';
 import { api } from '../services/api';
 import './Login.css';
+import TopologyBackground from '../components/TopologyBackground';
 import { Shield, Lock, User, Mail, PlusCircle, ArrowRight } from 'lucide-react';
 
 export default function Login() {
   const { login } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
-  
+
   // Form fields
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('DEVELOPER');
-  
+
   // Feedbacks
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -59,13 +60,16 @@ export default function Login() {
 
   return (
     <div className="login-page">
+      <TopologyBackground />
       {/* Dynamic background glows */}
       <div className="glow-1"></div>
       <div className="glow-2"></div>
 
       <div className="login-card glass-panel animate-fade-in">
         <div className="login-header">
-          <div className="brand-badge">BF</div>
+          <div className="brand-badge">
+            <img src="/favicon.png" className="brand-logo" alt="BugFlow" title="BugFlow" />
+          </div>
           <h2>{isRegister ? 'Create Account' : 'Welcome to BugFlow'}</h2>
           <p>{isRegister ? 'Register your developers and start tracking' : 'Enter your credentials to enter the dashboard'}</p>
         </div>
@@ -78,10 +82,10 @@ export default function Login() {
             <label htmlFor="username">Username</label>
             <div className="input-with-icon">
               <User size={16} className="input-icon" />
-              <input 
+              <input
                 id="username"
-                type="text" 
-                placeholder="e.g. johndoe" 
+                type="text"
+                placeholder="e.g. johndoe"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -94,10 +98,10 @@ export default function Login() {
               <label htmlFor="email">Email Address</label>
               <div className="input-with-icon">
                 <Mail size={16} className="input-icon" />
-                <input 
+                <input
                   id="email"
-                  type="email" 
-                  placeholder="e.g. john@company.com" 
+                  type="email"
+                  placeholder="e.g. john@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -110,10 +114,10 @@ export default function Login() {
             <label htmlFor="password">Password</label>
             <div className="input-with-icon">
               <Lock size={16} className="input-icon" />
-              <input 
+              <input
                 id="password"
-                type="password" 
-                placeholder="••••••••" 
+                type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -126,9 +130,9 @@ export default function Login() {
               <label htmlFor="role">Assign Role</label>
               <div className="input-with-icon">
                 <Shield size={16} className="input-icon" />
-                <select 
+                <select
                   id="role"
-                  value={role} 
+                  value={role}
                   onChange={(e) => setRole(e.target.value)}
                   required
                 >

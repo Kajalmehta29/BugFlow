@@ -4,6 +4,13 @@
   gap: 28px;
 }
 
+.dashboard-double-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 28px;
+  align-items: stretch;
+}
+
 .dashboard-loading {
   display: flex;
   flex-direction: column;
@@ -524,4 +531,113 @@
   border-radius: 4px;
   text-transform: uppercase;
   margin-bottom: 0 !important;
+}
+
+/* Project Info & Resources Section Styling */
+.resources-section {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.resources-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.resource-block {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.2s ease-in-out;
+}
+
+.resource-block:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border-focus);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.resource-block h4 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  margin-top: 0;
+}
+
+.project-detail-desc {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.live-domain-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  padding: 8px 12px;
+  background: rgba(45, 212, 191, 0.08);
+  border: 1px solid rgba(45, 212, 191, 0.15);
+  border-radius: 8px;
+  transition: var(--transition-fast);
+}
+
+.live-domain-link:hover {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.3);
+  transform: translateY(-1px);
+}
+
+.no-domain-text, .no-links-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.quick-links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.quick-link-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  text-transform: none;
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: all 0.2s ease-in-out;
+}
+
+.quick-link-item:hover {
+  background: rgba(45, 212, 191, 0.05);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.quick-link-item span {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
