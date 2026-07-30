@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import Topbar from './components/Topbar';
+import TopologyBackground from './components/TopologyBackground';
 import Login from './pages/Login';
 import GlobalDashboard from './pages/GlobalDashboard';
 import UserManagement from './pages/UserManagement';
@@ -39,8 +41,10 @@ const AppLayout = () => {
 
   return (
     <div className="app-container">
+      <TopologyBackground />
       {showSidebar && <Sidebar />}
       <div className={showSidebar ? "main-content" : "main-content full-width"}>
+        {showSidebar && <Topbar />}
         <Routes>
           <Route path="/" element={<ProtectedRoute><GlobalDashboard /></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
