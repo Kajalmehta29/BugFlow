@@ -17,7 +17,8 @@ import {
   ExternalLink,
   Link as LinkIcon,
   Trash2,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -41,6 +42,31 @@ export default function Dashboard() {
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [settingsError, setSettingsError] = useState('');
   const [showInfoModal, setShowInfoModal] = useState(false);
+
+  // AI Sprint Insights states
+  const [sprintInsights, setSprintInsights] = useState('');
+  const [loadingInsights, setLoadingInsights] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
+
+  const handleToggleSprintInsights = async (sprintId) => {
+    if (showInsights) {
+      setShowInsights(false);
+      return;
+    }
+    
+    setShowInsights(true);
+    if (sprintInsights) return;
+    
+    setLoadingInsights(true);
+    try {
+      const data = await api.getSprintAiInsights(sprintId);
+      setSprintInsights(data.content);
+    } catch (err) {
+      setSprintInsights("Failed to load sprint insights: " + err.message);
+    } finally {
+      setLoadingInsights(false);
+    }
+  };
 
   const handleOpenSettingsModal = () => {
     setSettingsName(activeProject.name);
@@ -310,24 +336,62 @@ export default function Dashboard() {
           )}
 
           {activeSprint ? (
-            <div className="sprint-info-box active-sprint">
-              <div className="sprint-details">
-                <span className="sprint-status-badge active-badge">Active</span>
-                <h3>{activeSprint.name}</h3>
-                <p className="sprint-dates">
-                  {activeSprint.startDate ? new Date(activeSprint.startDate).toLocaleDateString() : 'No start date'} - {activeSprint.endDate ? new Date(activeSprint.endDate).toLocaleDateString() : 'No end date'}
-                </p>
+            <>
+              <div className="sprint-info-box active-sprint">
+                <div className="sprint-details">
+                  <span className="sprint-status-badge active-badge">Active</span>
+                  <h3>{activeSprint.name}</h3>
+                  <p className="sprint-dates">
+                    {activeSprint.startDate ? new Date(activeSprint.startDate).toLocaleDateString() : 'No start date'} - {activeSprint.endDate ? new Date(activeSprint.endDate).toLocaleDateString() : 'No end date'}
+                  </p>
+                </div>
+                <div className="sprint-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => handleToggleSprintInsights(activeSprint.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Sparkles size={16} />
+                    <span>AI Insights</span>
+                  </button>
+                  {isPMorAdmin && (
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={() => handleUpdateSprintStatus(activeSprint.id, 'COMPLETED')}
+                    >
+                      <CheckSquare size={16} />
+                      <span>Complete Sprint</span>
+                    </button>
+                  )}
+                </div>
               </div>
-              {isPMorAdmin && (
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={() => handleUpdateSprintStatus(activeSprint.id, 'COMPLETED')}
-                >
-                  <CheckSquare size={16} />
-                  <span>Complete Sprint</span>
-                </button>
+
+              {showInsights && (
+                <div className="sprint-insights-panel glass-panel animate-fade-in" style={{ marginTop: '16px', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-focus)', background: 'rgba(99, 102, 241, 0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                    <h3 style={{ margin: 0, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontWeight: 'bold' }}>
+                      <Sparkles size={16} />
+                      <span>Sprint Optimization Intelligence</span>
+                    </h3>
+                    <button className="btn-close" onClick={() => setShowInsights(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                      <X size={16} />
+                    </button>
+                  </div>
+                  
+                  {loadingInsights ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '20px 0' }}>
+                      <Loader2 className="animate-spin" size={20} style={{ color: 'var(--color-primary)' }} />
+                      <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Analyzing sprint performance parameters...</span>
+                    </div>
+                  ) : (
+                    <div className="markdown-body" style={{ fontSize: '13px', lineHeight: '1.6', whiteSpace: 'pre-wrap', color: 'var(--text-primary)' }}>
+                      {sprintInsights}
+                    </div>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           ) : (
             <div className="sprint-info-box empty-sprint">
               <p>No active sprint currently running.</p>

@@ -8,15 +8,17 @@ public class UserResponse {
     private String username;
     private String email;
     private String role;
+    private boolean available;
 
     public UserResponse() {
     }
 
-    public UserResponse(Long id, String username, String email, String role) {
+    public UserResponse(Long id, String username, String email, String role, boolean available) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.role = role;
+        this.available = available;
     }
 
     public static UserResponse fromUser(User user) {
@@ -27,7 +29,8 @@ public class UserResponse {
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().name(),
+                user.isAvailable()
         );
     }
 
@@ -62,5 +65,13 @@ public class UserResponse {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public void setAvailable(boolean available) {
+        this.available = available;
     }
 }

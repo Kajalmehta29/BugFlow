@@ -253,5 +253,44 @@ export const api = {
     request('/notifications', {
       method: 'GET',
       headers: getHeaders()
+    }),
+
+  // User availability
+  updateUserAvailability: (available) =>
+    request(`/users/profile/availability?available=${available}`, {
+      method: 'PUT',
+      headers: getHeaders()
+    }),
+
+  // AI Issues Features
+  analyzeBugDraft: (projectId, title, description) =>
+    request('/bugs/ai/analyze-draft', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ projectId, title, description })
+    }),
+
+  getBugAiAnalysis: (bugId) =>
+    request(`/bugs/${bugId}/ai/analysis`, {
+      method: 'GET',
+      headers: getHeaders()
+    }),
+
+  analyzeBug: (bugId) =>
+    request(`/bugs/${bugId}/ai/analyze`, {
+      method: 'POST',
+      headers: getHeaders()
+    }),
+
+  getBugDuplicates: (bugId, projectId, title, description) =>
+    request(`/bugs/${bugId}/ai/duplicates?projectId=${projectId}&title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}`, {
+      method: 'POST',
+      headers: getHeaders()
+    }),
+
+  getSprintAiInsights: (sprintId) =>
+    request(`/sprints/${sprintId}/ai/insights`, {
+      method: 'GET',
+      headers: getHeaders()
     })
 };

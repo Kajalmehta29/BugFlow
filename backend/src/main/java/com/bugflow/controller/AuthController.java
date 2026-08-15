@@ -58,7 +58,8 @@ public class AuthController {
                 userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
-                role
+                role,
+                userDetails.isAvailable()
         ));
     }
 

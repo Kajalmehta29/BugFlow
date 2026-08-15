@@ -35,6 +35,10 @@ public class BugServiceImpl implements BugService {
     private final ActivityLogRepository activityLogRepository;
     private final NotificationService notificationService;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private com.bugflow.service.ai.AiIssueService aiIssueService;
+
     private final Path fileStorageLocation;
 
     public BugServiceImpl(BugRepository bugRepository,
@@ -104,10 +108,44 @@ public class BugServiceImpl implements BugService {
         }
 
         User assignee = null;
+        boolean wasAutoAssigned = false;
         if (request.getAssigneeId() != null) {
             assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new ResourceNotFoundException("Assignee not found: " + request.getAssigneeId()));
             validateUserMembership(project, assignee);
+        } else {
+            // Auto-Assignment to least-loaded available DEVELOPER or PROJECT_MANAGER
+            List<User> eligibleAssignees = new java.util.ArrayList<>();
+            if (project.getManager() != null && project.getManager().isAvailable() &&
+                    (project.getManager().getRole() == UserRole.PROJECT_MANAGER || project.getManager().getRole() == UserRole.DEVELOPER)) {
+                eligibleAssignees.add(project.getManager());
+            }
+            if (project.getMembers() != null) {
+                for (User member : project.getMembers()) {
+                    if (member.isAvailable() &&
+                            (member.getRole() == UserRole.DEVELOPER || member.getRole() == UserRole.PROJECT_MANAGER)) {
+                        if (!eligibleAssignees.contains(member)) {
+                            eligibleAssignees.add(member);
+                        }
+                    }
+                }
+            }
+
+            if (!eligibleAssignees.isEmpty()) {
+                User leastLoaded = null;
+                long minBugsCount = Long.MAX_VALUE;
+                for (User dev : eligibleAssignees) {
+                    long count = bugRepository.countActiveBugsByAssigneeIdAndProjectId(dev.getId(), project.getId());
+                    if (count < minBugsCount) {
+                        minBugsCount = count;
+                        leastLoaded = dev;
+                    }
+                }
+                assignee = leastLoaded;
+                if (assignee != null) {
+                    wasAutoAssigned = true;
+                }
+            }
         }
 
         Sprint sprint = null;
@@ -137,12 +175,22 @@ public class BugServiceImpl implements BugService {
 
         logActivity(savedBug, reporter, "CREATED", null, "Status set to " + initialStatus);
         if (assignee != null) {
-            logActivity(savedBug, reporter, "ASSIGNEE_CHANGED", null, assignee.getUsername());
+            if (wasAutoAssigned) {
+                logActivity(savedBug, reporter, "AUTO_ASSIGNED", null, assignee.getUsername());
+            } else {
+                logActivity(savedBug, reporter, "ASSIGNEE_CHANGED", null, assignee.getUsername());
+            }
             notificationService.sendNotification(
                     assignee.getId(),
                     "New Bug Assigned",
                     "You have been assigned to bug: " + savedBug.getTitle() + " (" + project.getKey() + ")"
             );
+        }
+
+        try {
+            aiIssueService.reanalyzeBug(savedBug.getId());
+        } catch (Exception e) {
+            System.err.println("Failed to perform initial AI analysis: " + e.getMessage());
         }
 
         return BugResponse.fromBug(savedBug);
@@ -296,6 +344,12 @@ public class BugServiceImpl implements BugService {
         }
 
         Bug savedBug = bugRepository.save(bug);
+
+        try {
+            aiIssueService.reanalyzeBug(savedBug.getId());
+        } catch (Exception e) {
+            System.err.println("Failed to update AI analysis: " + e.getMessage());
+        }
 
         if (assigneeChanged) {
             if (newAssignee != null) {

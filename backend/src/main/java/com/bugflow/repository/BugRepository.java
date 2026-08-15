@@ -40,4 +40,7 @@ public interface BugRepository extends JpaRepository<Bug, Long> {
 
     @Query("SELECT COUNT(b) FROM Bug b WHERE b.project.id = :projectId AND b.priority = :priority")
     long countByProjectIdAndPriority(@Param("projectId") Long projectId, @Param("priority") BugPriority priority);
+
+    @Query("SELECT COUNT(b) FROM Bug b WHERE b.assignee.id = :assigneeId AND b.project.id = :projectId AND b.status NOT IN (com.bugflow.model.BugStatus.RESOLVED, com.bugflow.model.BugStatus.CLOSED)")
+    long countActiveBugsByAssigneeIdAndProjectId(@Param("assigneeId") Long assigneeId, @Param("projectId") Long projectId);
 }

@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   Loader2,
   Trash2,
-  FileText
+  FileText,
+  Sparkles
 } from 'lucide-react';
 
 export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMembers, sprints }) {
@@ -28,8 +29,14 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // AI states
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [similarBugs, setSimilarBugs] = useState([]);
+
   // Interaction states
-  const [activeTab, setActiveTab] = useState('comments'); // 'comments', 'timeline', 'attachments'
+  const [activeTab, setActiveTab] = useState('comments'); // 'comments', 'timeline', 'attachments', 'ai'
   const [newComment, setNewComment] = useState('');
   const [fileToUpload, setFileToUpload] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -74,9 +81,76 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
     }
   };
 
+  const loadAiAnalysis = async () => {
+    if (!bug) return;
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const data = await api.getBugAiAnalysis(bugId);
+      setAiAnalysis(data);
+      const dups = await api.getBugDuplicates(bugId, bug.projectId, bug.title, bug.description);
+      setSimilarBugs(dups);
+    } catch (err) {
+      setAiError(err.message || 'Failed to load AI Insights');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleReanalyze = async () => {
+    if (!bug) return;
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const data = await api.analyzeBug(bugId);
+      setAiAnalysis(data);
+      const dups = await api.getBugDuplicates(bugId, bug.projectId, bug.title, bug.description);
+      setSimilarBugs(dups);
+    } catch (err) {
+      setAiError(err.message || 'Re-analysis failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleApplyAiSummary = async () => {
+    if (!aiAnalysis || !bug) return;
+    if (!window.confirm("Are you sure you want to update the main description and title with the AI-generated structured summary? This will modify the ticket.")) {
+      return;
+    }
+    try {
+      const formattedSummary = `[AI SUMMARY]\n${aiAnalysis.problemSummary}\n\n[STEPS TO REPRODUCE]\n${aiAnalysis.stepsToReproduce}\n\n[EXPECTED BEHAVIOR]\n${aiAnalysis.expectedBehavior}\n\n[ACTUAL BEHAVIOR]\n${aiAnalysis.actualBehavior}\n\n[TECHNICAL DETAILS]\n${aiAnalysis.technicalDetails}`;
+      
+      const updated = await api.updateBug(
+        bugId,
+        bug.projectId,
+        aiAnalysis.summaryTitle || bug.title,
+        formattedSummary,
+        bug.priority,
+        bug.severity,
+        bug.assignee ? bug.assignee.id : null,
+        bug.sprint ? bug.sprint.id : null
+      );
+      
+      onBugUpdated();
+      setBug(updated);
+      setEditTitle(updated.title);
+      setEditDesc(updated.description);
+      alert('AI Summary applied successfully to the main description!');
+    } catch (err) {
+      alert(`Failed to apply summary: ${err.message}`);
+    }
+  };
+
   useEffect(() => {
     loadBugData();
   }, [bugId]);
+
+  useEffect(() => {
+    if (activeTab === 'ai' && bug) {
+      loadAiAnalysis();
+    }
+  }, [bugId, activeTab, bug == null]);
 
   const handlePostComment = async (e) => {
     e.preventDefault();
@@ -380,6 +454,13 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
                   <Paperclip size={16} />
                   <span>Attachments ({attachments.length})</span>
                 </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('ai')}
+                >
+                  <Sparkles size={16} />
+                  <span>AI Insights</span>
+                </button>
               </div>
 
               <div className="tab-body">
@@ -491,6 +572,130 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
                         ))
                       )}
                     </div>
+                  </div>
+                )}
+
+                {/* TAB 4: AI INSIGHTS */}
+                {activeTab === 'ai' && (
+                  <div className="tab-ai-insights animate-fade-in" style={{ padding: '16px 0' }}>
+                    {aiLoading ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '40px 0' }}>
+                        <Loader2 className="animate-spin" size={32} style={{ color: 'var(--color-primary)' }} />
+                        <span style={{ color: 'var(--text-secondary)' }}>Analyzing ticket intelligence...</span>
+                      </div>
+                    ) : aiError ? (
+                      <div className="feedback-box error-box">
+                        <div>{aiError}</div>
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={loadAiAnalysis} style={{ marginTop: '8px' }}>
+                          Retry
+                        </button>
+                      </div>
+                    ) : aiAnalysis ? (
+                      <div>
+                        {/* Header Action Row */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', color: 'var(--color-primary)', fontWeight: 'bold' }}>
+                            <Sparkles size={18} />
+                            <span>AI Issue Intelligence</span>
+                          </h3>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={handleReanalyze}>
+                            Re-Analyze
+                          </button>
+                        </div>
+
+                        {/* Classification Info */}
+                        <div className="glass-panel" style={{ padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '20px', background: 'var(--bg-hover)' }}>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', fontWeight: 'bold' }}>Suggested Classification</h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', fontSize: '13px' }}>
+                            <div><strong>Category:</strong> {aiAnalysis.category || 'General'}</div>
+                            <div><strong>Component:</strong> {aiAnalysis.component || 'General / Core'}</div>
+                            <div><strong>Suggested Severity:</strong> {aiAnalysis.suggestedSeverity}</div>
+                            <div><strong>Suggested Priority:</strong> {aiAnalysis.suggestedPriority}</div>
+                          </div>
+                          {aiAnalysis.keywords && (
+                            <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                              <strong style={{ fontSize: '12px', color: 'var(--text-secondary)', marginRight: '6px' }}>Keywords:</strong>
+                              {aiAnalysis.keywords.split(',').map((kw, idx) => (
+                                <span key={idx} style={{ padding: '2px 8px', borderRadius: '4px', background: 'var(--border-color)', border: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--text-primary)' }}>
+                                  {kw.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Duplicates Section */}
+                        <div className="glass-panel" style={{ padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '20px', background: 'var(--bg-hover)' }}>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', fontWeight: 'bold' }}>Possible Duplicate Issues</h4>
+                          {similarBugs && similarBugs.length > 0 ? (
+                            <ul style={{ paddingLeft: '16px', margin: 0, fontSize: '13px' }}>
+                              {similarBugs.map(dup => (
+                                <li key={dup.id} style={{ marginBottom: '8px' }}>
+                                  <span style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>#{dup.id}</span> - {dup.title}
+                                  <span style={{ marginLeft: '8px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '11px', fontWeight: 'bold' }}>
+                                    {Math.round(dup.similarity * 100)}% Similarity
+                                  </span>
+                                  <span style={{ marginLeft: '8px', padding: '1px 6px', borderRadius: '4px', background: 'var(--border-color)', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                    {dup.status}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>No potential duplicates found above 80% similarity.</div>
+                          )}
+                        </div>
+
+                        {/* Structured Summary Section */}
+                        <div className="glass-panel" style={{ padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-hover)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px' }}>
+                            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>AI-Generated Structured Summary</h4>
+                            <button type="button" className="btn btn-primary btn-sm" onClick={handleApplyAiSummary} style={{ fontSize: '11px', padding: '4px 10px' }}>
+                              Apply Summary to Ticket
+                            </button>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', lineHeight: '1.5' }}>
+                            <div>
+                              <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Summary Title</strong>
+                              <div>{aiAnalysis.summaryTitle || 'N/A'}</div>
+                            </div>
+                            <div>
+                              <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Problem Summary</strong>
+                              <div>{aiAnalysis.problemSummary || 'N/A'}</div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                              <div>
+                                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Expected Behavior</strong>
+                                <div>{aiAnalysis.expectedBehavior || 'N/A'}</div>
+                              </div>
+                              <div>
+                                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Actual Behavior</strong>
+                                <div>{aiAnalysis.actualBehavior || 'N/A'}</div>
+                              </div>
+                            </div>
+                            <div>
+                              <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Steps to Reproduce</strong>
+                              <div style={{ whiteSpace: 'pre-wrap' }}>{aiAnalysis.stepsToReproduce || 'N/A'}</div>
+                            </div>
+                            <div>
+                              <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Technical Details</strong>
+                              <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-panel, rgba(0,0,0,0.15))', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                                {aiAnalysis.technicalDetails || 'N/A'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '40px 0' }}>
+                        <Sparkles size={24} style={{ color: 'var(--text-secondary)' }} />
+                        <span style={{ color: 'var(--text-secondary)' }}>No intelligence generated yet. Click analyze to start.</span>
+                        <button type="button" className="btn btn-primary btn-sm" onClick={handleReanalyze}>
+                          Run Analysis
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

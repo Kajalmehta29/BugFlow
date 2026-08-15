@@ -8,13 +8,15 @@ public class JwtResponse {
     private String username;
     private String email;
     private String role;
+    private boolean available;
 
-    public JwtResponse(String accessToken, Long id, String username, String email, String role) {
+    public JwtResponse(String accessToken, Long id, String username, String email, String role, boolean available) {
         this.token = accessToken;
         this.id = id;
         this.username = username;
         this.email = email;
         this.role = role;
+        this.available = available;
     }
 
     // Getters and Setters
@@ -64,5 +66,13 @@ public class JwtResponse {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public void setAvailable(boolean available) {
+        this.available = available;
     }
 }

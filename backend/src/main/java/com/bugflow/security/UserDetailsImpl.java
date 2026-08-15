@@ -21,15 +21,17 @@ public class UserDetailsImpl implements UserDetails {
     private final String password;
 
     private final UserRole role;
+    private final boolean available;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetailsImpl(Long id, String username, String email, String password, UserRole role,
+    public UserDetailsImpl(Long id, String username, String email, String password, UserRole role, boolean available,
                            Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
         this.role = role;
+        this.available = available;
         this.authorities = authorities;
     }
 
@@ -42,6 +44,7 @@ public class UserDetailsImpl implements UserDetails {
                 user.getEmail(),
                 user.getPassword(),
                 user.getRole(),
+                user.isAvailable(),
                 Collections.singletonList(authority)
         );
     }
@@ -56,6 +59,10 @@ public class UserDetailsImpl implements UserDetails {
 
     public UserRole getRole() {
         return role;
+    }
+
+    public boolean isAvailable() {
+        return available;
     }
 
     @Override

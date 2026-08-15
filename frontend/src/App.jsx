@@ -85,7 +85,7 @@ export default function App() {
     try {
       const data = await api.login(username, password);
       localStorage.setItem('token', data.token);
-      const userDetails = { id: data.id, username: data.username, email: data.email, role: data.role };
+      const userDetails = { id: data.id, username: data.username, email: data.email, role: data.role, available: data.available };
       localStorage.setItem('user', JSON.stringify(userDetails));
 
       setToken(data.token);
@@ -106,6 +106,14 @@ export default function App() {
       return { success: false, error: err.message };
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateUserAvailability = (available) => {
+    if (user) {
+      const updated = { ...user, available };
+      localStorage.setItem('user', JSON.stringify(updated));
+      setUser(updated);
     }
   };
 
@@ -161,6 +169,7 @@ export default function App() {
       logout,
       selectProject,
       refreshProjects,
+      updateUserAvailability,
       loading
     }}>
       <BrowserRouter>

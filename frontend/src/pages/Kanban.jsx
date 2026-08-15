@@ -53,6 +53,11 @@ export default function Kanban() {
   const [imageFile, setImageFile] = useState(null);
   const [previewAttachment, setPreviewAttachment] = useState(null);
 
+  // AI draft analysis states
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResults, setAiResults] = useState(null);
+  const [aiError, setAiError] = useState('');
+
   const loadBoardData = async () => {
     if (!activeProject) return;
     setLoading(true);
@@ -155,10 +160,45 @@ export default function Kanban() {
 
   const closeCreateModal = () => {
     setShowCreateModal(false);
+    setTitle('');
+    setDescription('');
+    setPriority('MEDIUM');
+    setSeverity('MEDIUM');
+    setAssigneeId('');
+    setSprintId('');
+    setImageFile(null);
+    setAiResults(null);
+    setAiError('');
     const params = new URLSearchParams(location.search);
     if (params.get('report') === 'true') {
       navigate('/board', { replace: true });
     }
+  };
+
+  const handleAiAnalyze = async () => {
+    if (!title.trim() || !description.trim()) {
+      setAiError('Please enter a title and description first.');
+      return;
+    }
+    setAiLoading(true);
+    setAiError('');
+    setAiResults(null);
+    try {
+      const data = await api.analyzeBugDraft(activeProject.id, title, description);
+      setAiResults(data);
+    } catch (err) {
+      setAiError(err.message || 'AI analysis failed.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleApplyAiSuggestions = () => {
+    if (!aiResults || !aiResults.classification) return;
+    const { priority: sugPriority, severity: sugSeverity } = aiResults.classification;
+    if (sugPriority) setPriority(sugPriority);
+    if (sugSeverity) setSeverity(sugSeverity);
+    setAiResults(null);
   };
 
   const handleCreateBug = async (e) => {
@@ -397,6 +437,73 @@ export default function Kanban() {
                   rows={4}
                   required
                 />
+              </div>
+
+              {/* AI Analysis Panel */}
+              <div className="form-group ai-analysis-group" style={{ marginBottom: '16px' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary btn-ai-action"
+                  onClick={handleAiAnalyze}
+                  disabled={aiLoading || !title.trim() || !description.trim()}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', width: 'fit-content' }}
+                >
+                  {aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  <span>Analyze with AI</span>
+                </button>
+                
+                {aiError && <div className="ai-feedback error-text" style={{ marginTop: '8px', color: 'var(--color-danger)', fontSize: '13px' }}>{aiError}</div>}
+                
+                {aiResults && (
+                  <div className="ai-suggestions-panel glass-panel animate-fade-in" style={{ marginTop: '12px', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-focus)', background: 'rgba(99, 102, 241, 0.05)' }}>
+                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 12px 0', color: 'var(--color-primary)', fontSize: '14px', fontWeight: 'bold' }}>
+                      <Sparkles size={16} />
+                      <span>AI Suggestions</span>
+                    </h4>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px', fontSize: '13px' }}>
+                      <div><strong>Suggested Category:</strong> {aiResults.classification?.category || 'General'}</div>
+                      <div><strong>Suggested Component:</strong> {aiResults.classification?.component || 'Core'}</div>
+                      <div><strong>Suggested Priority:</strong> {aiResults.classification?.priority}</div>
+                      <div><strong>Suggested Severity:</strong> {aiResults.classification?.severity}</div>
+                    </div>
+
+                    {aiResults.duplicates && aiResults.duplicates.length > 0 && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <strong style={{ display: 'block', marginBottom: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>Possible Duplicates Found:</strong>
+                        <ul style={{ paddingLeft: '16px', margin: 0, fontSize: '13px' }}>
+                          {aiResults.duplicates.map(dup => (
+                            <li key={dup.id} style={{ marginBottom: '4px' }}>
+                              <span style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>#{dup.id}</span> - {dup.title} 
+                              <span style={{ marginLeft: '8px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '11px', fontWeight: 'bold' }}>
+                                {Math.round(dup.similarity * 100)}% Match
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        type="button" 
+                        className="btn btn-primary btn-sm" 
+                        onClick={handleApplyAiSuggestions}
+                        style={{ fontSize: '12px', padding: '6px 12px' }}
+                      >
+                        Accept Suggestions
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn btn-text btn-sm" 
+                        onClick={() => setAiResults(null)}
+                        style={{ fontSize: '12px', padding: '6px 12px' }}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="form-row">

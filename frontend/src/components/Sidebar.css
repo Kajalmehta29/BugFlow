@@ -262,3 +262,30 @@
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.2);
 }
+
+/* User Status Indicator */
+.user-avatar-container {
+  position: relative;
+  display: inline-block;
+}
+
+.status-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card, #1e1e2d);
+  transition: var(--transition-fast);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.status-dot.active {
+  background-color: #22c55e; /* Vibrant Green */
+}
+
+.status-dot.inactive {
+  background-color: #9ca3af; /* Grey */
+}
+

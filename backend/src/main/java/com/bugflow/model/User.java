@@ -36,6 +36,9 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "available", nullable = false)
+    private boolean available = true;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -45,12 +48,13 @@ public class User {
     public User() {
     }
 
-    public User(Long id, String username, String email, String password, UserRole role, LocalDateTime createdAt) {
+    public User(Long id, String username, String email, String password, UserRole role, boolean available, LocalDateTime createdAt) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
         this.role = role;
+        this.available = available;
         this.createdAt = createdAt;
     }
 
@@ -95,6 +99,14 @@ public class User {
         this.role = role;
     }
 
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public void setAvailable(boolean available) {
+        this.available = available;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -110,6 +122,7 @@ public class User {
                 ", username='" + username + '\'' +
                 ", email='" + email + '\'' +
                 ", role=" + role +
+                ", available=" + available +
                 ", createdAt=" + createdAt +
                 '}';
     }
@@ -125,6 +138,7 @@ public class User {
         private String email;
         private String password;
         private UserRole role;
+        private boolean available = true;
         private LocalDateTime createdAt;
 
         public UserBuilder id(Long id) {
@@ -152,13 +166,18 @@ public class User {
             return this;
         }
 
+        public UserBuilder available(boolean available) {
+            this.available = available;
+            return this;
+        }
+
         public UserBuilder createdAt(LocalDateTime createdAt) {
             this.createdAt = createdAt;
             return this;
         }
 
         public User build() {
-            return new User(id, username, email, password, role, createdAt);
+            return new User(id, username, email, password, role, available, createdAt);
         }
     }
 }

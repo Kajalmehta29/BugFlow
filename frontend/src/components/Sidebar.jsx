@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../App';
+import { api } from '../services/api';
 import './Sidebar.css';
 import { 
   LayoutDashboard, 
@@ -14,8 +15,23 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar() {
-  const { user, logout, activeProject, projects, selectProject } = useAuth();
+  const { user, logout, activeProject, projects, selectProject, updateUserAvailability } = useAuth();
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [updatingAvailability, setUpdatingAvailability] = useState(false);
+
+  const handleToggleAvailability = async () => {
+    if (!user || updatingAvailability) return;
+    setUpdatingAvailability(true);
+    try {
+      const newStatus = !user.available;
+      await api.updateUserAvailability(newStatus);
+      updateUserAvailability(newStatus);
+    } catch (err) {
+      console.error("Failed to toggle availability:", err);
+    } finally {
+      setUpdatingAvailability(false);
+    }
+  };
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -142,8 +158,16 @@ export default function Sidebar() {
       <div className="sidebar-footer">
         {user && (
           <div className="user-card-collapsed">
-            <div className="user-avatar" title={`${user.username} (${user.role.replace('_', ' ')})`}>
-              <User size={18} />
+            <div 
+              className="user-avatar-container" 
+              onClick={handleToggleAvailability}
+              title={`Click to set ${user.available ? 'Away' : 'Available'} (Currently ${user.available ? 'Available' : 'Away'})`}
+              style={{ cursor: 'pointer', position: 'relative' }}
+            >
+              <div className="user-avatar">
+                <User size={18} />
+              </div>
+              <span className={`status-dot ${user.available ? 'active' : 'inactive'}`}></span>
             </div>
             <button className="btn-logout" onClick={logout} title="Sign Out">
               <LogOut size={18} />

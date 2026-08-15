@@ -90,4 +90,14 @@ public class UserController {
         userRepository.delete(userToDelete);
         return ResponseEntity.ok(new MessageResponse("User deleted successfully!"));
     }
+
+    @PutMapping("/profile/availability")
+    public ResponseEntity<UserResponse> updateAvailability(@RequestParam boolean available,
+                                                           @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userDetails.getUsername()));
+        user.setAvailable(available);
+        User savedUser = userRepository.save(user);
+        return ResponseEntity.ok(UserResponse.fromUser(savedUser));
+    }
 }
