@@ -1,199 +1,455 @@
-# 🪲 BugFlow
+# BugFlow
 
-**BugFlow** is a modern, high-performance, full-stack Bug Tracking and Sprint Management application (a lightweight, simplified Jira clone). It allows software development teams to manage projects, track issues through Scrum/Kanban boards, schedule sprints, log activity timelines, and collaborate via comments and attachment uploads.
+**BugFlow** is a full-stack bug tracking and project management platform built for software development teams. It provides a structured workflow for reporting, organizing, assigning, tracking, and resolving software issues, with **AI-powered bug triage and developer assistance** integrated directly into the workflow.
 
----
-
-## 📺 Project Demo
-
-Since the application is run locally, here is a full demonstration video showing the user flows, dashboard statistics, Kanban boards, and real-time features.
-
-<p align="center">
-  <video src="media/demo.mp4" width="100%" controls title="BugFlow Demo Video">
-    Your browser does not support the video tag. You can view the video file directly at <a href="media/demo.mp4">media/demo.mp4</a>.
-  </video>
-</p>
-
-*If the video does not load automatically in your markdown viewer, you can access the file at [media/demo.mp4](media/demo.mp4).*
+The project combines **React, Spring Boot, PostgreSQL, Redis, Docker, JWT authentication, and AI services** to create a complete issue management system.
 
 ---
 
-## ✨ Features
+## Features
 
-- **📊 Comprehensive Dashboards**:
-  - **Global Dashboard**: Track overall system stats across all projects.
-  - **Project-Specific Dashboard**: Interactive charts and cards detailing bug counts by status, priority, and severity.
-- **📋 Kanban Board**:
-  - Drag-and-drop workflow transition for bug statuses: `OPEN` ➜ `ASSIGNED` ➜ `IN_PROGRESS` ➜ `CODE_REVIEW` ➜ `TESTING` ➜ `RESOLVED` ➜ `CLOSED`.
-  - Filter bugs instantly by Sprints, Priority, Assignee, or keyword search.
-- **📁 Sprint Management**:
-  - Plan and create sprints with custom date ranges.
-  - Active sprint controls (e.g., transition sprint status).
-- **📂 File Attachments & Previews**:
-  - Upload screenshots or documents to help describe bugs.
-  - Built-in preview modal for images and documents.
-- **💬 Team Collaboration**:
-  - Comment threads on individual bug tickets.
-  - Action/Activity timeline tracking changes made to a bug.
-- **🛡️ Security & Rate Limiting**:
-  - Secured endpoints using JWT authentication.
-  - Built-in rate-limiting filter to prevent API abuse.
-  - Role-Based Access Control (`ADMIN`, `PROJECT_MANAGER`, `DEVELOPER`,`TESTER`).
-- **⚡ Performance Cache**:
-  - Redis cache integration for high-performance dashboard statistics retrieval.
+### Bug & Issue Management
+
+* Create, update, assign, and track bugs
+* Priority and severity management
+* Issue search, filtering, and sorting
+* Complete bug lifecycle tracking
+* Kanban-based workflow
+* Comments and collaboration
+* File attachments
+* Issue activity timeline
+
+### Project & Sprint Management
+
+* Create and manage projects
+* Add and manage project members
+* Create and manage sprints
+* Assign bugs to sprints
+* Track sprint progress
+* Project-level dashboards and analytics
+
+### AI-Powered Bug Intelligence
+
+BugFlow integrates AI directly into the bug reporting and development workflow.
+
+**AI capabilities include:**
+
+* Automated bug classification
+* Priority and severity suggestions
+* Component detection
+* Semantic duplicate bug detection
+* Issue summarization
+* AI-based assignee recommendations
+* Root-cause analysis
+* Code-fix suggestions
+* Comment summarization
+* QA test-case generation
+* Sprint health insights
+
+AI suggestions can be reviewed and accepted by the user before being applied to an issue.
+
+### Semantic Duplicate Detection
+
+BugFlow uses the **all-MiniLM-L6-v2** embedding model to detect semantically similar issues.
+
+```text
+Bug Title + Description
+          ↓
+   Embedding Model
+          ↓
+    Vector Representation
+          ↓
+   Similarity Comparison
+          ↓
+ Potential Duplicate Issues
+```
+
+This allows BugFlow to identify similar bugs even when they use different wording.
+
+### Authentication & Security
+
+* JWT-based stateless authentication
+* BCrypt password hashing
+* Role-based authorization
+* Protected frontend routes
+* Spring Security
+* API rate limiting
+* Project-level access validation
+
+### Roles
+
+| Role                | Responsibilities                       |
+| ------------------- | -------------------------------------- |
+| **ADMIN**           | User and system management             |
+| **PROJECT_MANAGER** | Projects, sprints, members, and issues |
+| **DEVELOPER**       | Development and issue management       |
+| **TESTER**          | Bug reporting and verification         |
 
 ---
 
-## 🛠️ Tech Stack
+## Bug Workflow
+
+Issues move through a structured development lifecycle:
+
+```text
+OPEN
+  ↓
+ASSIGNED
+  ↓
+IN_PROGRESS
+  ↓
+CODE_REVIEW
+  ↓
+TESTING
+  ↓
+RESOLVED
+  ↓
+CLOSED
+```
+
+This provides a clear view of where every issue stands in the development process.
+
+---
+
+## AI Architecture
+
+BugFlow uses a provider-based AI architecture.
+
+```text
+                  BugFlow AI Layer
+                         │
+             ┌───────────┴───────────┐
+             │                       │
+       Gemini Provider        Local AI Provider
+             │                       │
+             └───────────┬───────────┘
+                         ↓
+                  AI Issue Service
+                         │
+        ┌────────────────┼────────────────┐
+        ↓                ↓                ↓
+ Classification    Recommendations   Summarization
+```
+
+The application can use the **Gemini API** for generative AI functionality.
+
+For supported operations, BugFlow also provides local AI functionality, including semantic issue similarity using **all-MiniLM-L6-v2** embeddings.
+
+---
+
+## Tech Stack
 
 ### Frontend
-- **Framework**: React 19 (Functional Components & Hooks)
-- **Tooling**: Vite (Hot Module Replacement)
-- **Routing**: React Router DOM v7
-- **Styling**: Vanilla CSS (Modern CSS custom variables, sleek transitions, glassmorphism, responsive grid layouts)
-- **Icons**: Lucide React
+
+* React 19
+* React Router
+* Vite
+* Lucide React
+* CSS
 
 ### Backend
-- **Core Framework**: Spring Boot 3.3.2 (Java 17)
-- **Security**: Spring Security + Stateless JWT auth (`io.jsonwebtoken`)
-- **Data Persistence**: Spring Data JPA & Hibernate
-- **Database**: PostgreSQL (Relational schema with cascade rules)
-- **Cache & Storage**: Redis (caching stats)
-- **Documentation**: Springdoc OpenAPI v2 (Swagger UI)
 
-### Infrastructure
-- **Containerization**: Docker & Docker Compose
+* Java 17
+* Spring Boot 3.3
+* Spring Web
+* Spring Data JPA
+* Hibernate
+* Spring Security
+* JWT / JJWT
+* Spring Validation
+* Springdoc OpenAPI
 
----
+### Database & Infrastructure
 
-## 🚀 Getting Started
+* PostgreSQL 15
+* Redis 7
+* Docker
+* Docker Compose
 
-### Prerequisites
-Make sure you have the following installed on your machine:
-- **Java Development Kit (JDK) 17**
-- **Node.js (v18+) & npm**
-- **Docker & Docker Compose**
-- **Maven** (optional, you can also use your IDE build tools)
+### AI
 
----
-
-### Step 1: Clone the Repository & Configure Environment
-
-1. Copy the example environment file at the root:
-   ```bash
-   cp .env.example .env
-   ```
-2. Open `.env` and fill in your database credentials and configuration keys:
-   ```env
-   SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/bugflow_db
-   SPRING_DATASOURCE_USERNAME=postgres
-   SPRING_DATASOURCE_PASSWORD=your_secure_password
-   SPRING_REDIS_HOST=localhost
-   SPRING_REDIS_PORT=6379
-   APP_JWT_SECRET=your_jwt_secret_key_at_least_64_characters_long
-   APP_JWT_EXPIRATION_MS=86400000
-   VITE_API_URL=http://localhost:8080/api/v1
-   ```
+* Gemini API
+* LangChain4j
+* all-MiniLM-L6-v2
+* ONNX
 
 ---
 
-### Step 2: Spin Up Infrastructure (PostgreSQL & Redis)
+## Architecture
 
-Launch the database and Redis services using Docker Compose:
-```bash
-docker compose up -d
+```text
+┌──────────────────────────────┐
+│       React Frontend         │
+│                              │
+│ Dashboard │ Kanban │ Issues  │
+│ Projects  │ Sprints │ Users  │
+└──────────────┬───────────────┘
+               │
+            REST API
+               │
+               ↓
+┌──────────────────────────────┐
+│      Spring Boot Backend     │
+│                              │
+│ Controllers                  │
+│      ↓                       │
+│ Services                     │
+│      ↓                       │
+│ Repositories                 │
+└──────────┬───────────┬───────┘
+           │           │
+           ↓           ↓
+     PostgreSQL      Redis
+           │
+           ↓
+      AI Services
+     ┌─────┴─────┐
+     ↓           ↓
+  Gemini     Local AI
 ```
-*This will spin up two alpine-based containers on ports `5432` (PostgreSQL) and `6379` (Redis) with persistent volumes.*
 
 ---
 
-### Step 3: Run the Backend Server
-
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Build and run the Spring Boot application:
-   ```bash
-   mvn spring-boot:run
-   ```
-   *The backend will boot up on port `8080`. Databases and tables will be created automatically via Hibernate DDL auto-update.*
-
----
-
-### Step 4: Run the Frontend Server
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
-   *The frontend will run locally, usually at `http://localhost:5173`.*
-
----
-
-## 🔌 API Documentation & Swagger
-
-Once the backend is running, you can explore, test, and view the API contract using Swagger UI.
-
-- **Interactive API Swagger Console**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- **JSON OpenAPI Specifications**: [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
-
----
-
-## 📂 Project Structure
+## Project Structure
 
 ```text
 BugFlow/
-├── backend/                  # Spring Boot Service
-│   ├── src/main/java/        # Java Source code
-│   │   └── com/bugflow/
-│   │       ├── config/       # OpenAPI, Redis setup
-│   │       ├── controller/   # REST Controllers (Auth, Project, Bug, Sprint, etc.)
-│   │       ├── dto/          # Requests & Response DTOs
-│   │       ├── exception/    # Custom Exception Handlers
-│   │       ├── model/        # Entities (User, Project, Bug, Sprint, etc.)
-│   │       ├── repository/   # JPA Repositories
-│   │       ├── security/     # JWT authentication & Rate Limiting filter
-│   │       └── service/      # Business logic implementation
-│   ├── src/main/resources/
-│   │   └── application.yml   # Spring configuration profile
-│   └── pom.xml               # Maven dependencies
 │
-├── frontend/                 # React SPA Service
+├── backend/
+│   ├── src/main/java/com/bugflow/
+│   │   ├── config/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── exception/
+│   │   ├── model/
+│   │   ├── repository/
+│   │   ├── security/
+│   │   └── service/
+│   └── pom.xml
+│
+├── frontend/
 │   ├── src/
-│   │   ├── assets/           # Visual resources
-│   │   ├── components/       # Modals (Bug detail, Attachments), Sidebar, Topbar
-│   │   ├── pages/            # View components (Login, Kanban, Dashboards)
-│   │   ├── services/         # api.js client wrappers
-│   │   ├── App.jsx           # Main Router / Layout manager
-│   │   └── main.jsx          # Entry point
-│   ├── index.html            # Core layout
-│   └── package.json          # Dependencies & scripts
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   └── package.json
 │
-├── media/                    # Showcase assets
-│   └── demo.mp4              # Project Walkthrough video
-│
-├── docker-compose.yml        # PostgreSQL and Redis services config
-├── .env.example              # Config template
-└── README.md                 # Main workspace documentation (this file)
+├── docker-compose.yml
+├── .env.example
+└── README.md
 ```
 
 ---
 
-## 🔒 Security Features
+## Getting Started
 
-1. **JSON Web Tokens (JWT)**: Login requests respond with a secure JWT. Subsequent requests pass the token in the `Authorization` header as a Bearer token.
-2. **Rate Limiting Filter**: Implemented filter in the API gateway/security stack to mitigate brute-force and Denial-of-Service (DoS) attacks on endpoints.
-3. **Role-Based Access Control**:
-   - `ADMIN`: Full user administration capabilities and project setups.
-   - `PROJECT_MANAGER`: Access to create sprints, projects, and configure team members.
-   - `DEVELOPER`: Standard ticket CRUD operations, status transitions, comments, and attachments.
-   - `TESTER`: Can view tickets and add comments/attachments to tickets.
+### Prerequisites
+
+Make sure you have:
+
+* Java 17+
+* Node.js 18+
+* npm
+* Maven
+* Docker & Docker Compose
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Kajalmehta29/BugFlow.git
+cd BugFlow
+```
+
+### 2. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Configure your database, Redis, JWT, and optional Gemini credentials.
+
+Example:
+
+```env
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/bugflow_db
+SPRING_DATASOURCE_USERNAME=your_username
+SPRING_DATASOURCE_PASSWORD=your_password
+
+SPRING_REDIS_HOST=localhost
+SPRING_REDIS_PORT=6379
+
+APP_JWT_SECRET=your_jwt_secret
+APP_JWT_EXPIRATION_MS=86400000
+
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+### 3. Start PostgreSQL and Redis
+
+```bash
+docker compose up -d
+```
+
+### 4. Start the backend
+
+```bash
+cd backend
+mvn spring-boot:run
+```
+
+Backend:
+
+```text
+http://localhost:8080
+```
+
+### 5. Start the frontend
+
+In another terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## API Documentation
+
+BugFlow uses **Springdoc OpenAPI** for interactive API documentation.
+
+After starting the backend:
+
+**Swagger UI**
+
+```text
+http://localhost:8080/swagger-ui.html
+```
+
+**OpenAPI Specification**
+
+```text
+http://localhost:8080/api-docs
+```
+
+---
+
+## API Overview
+
+Main API modules include:
+
+```text
+/api/v1/auth
+/api/v1/projects
+/api/v1/bugs
+/api/v1/sprints
+/api/v1/dashboard
+/api/v1/users
+/api/v1/notifications
+```
+
+AI functionality is exposed through endpoints under:
+
+```text
+/api/v1/bugs/ai
+/api/v1/bugs/{id}/ai
+/api/v1/sprints/{id}/ai
+```
+
+---
+
+## Caching
+
+**Redis** is used to improve application performance by caching frequently requested or computationally expensive data such as:
+
+* Dashboard statistics
+* Duplicate detection results
+* Sprint AI insights
+
+Cache invalidation is applied when relevant issue changes make cached data stale.
+
+---
+
+## Testing
+
+Run backend tests using:
+
+```bash
+cd backend
+mvn test
+```
+
+Run frontend linting using:
+
+```bash
+cd frontend
+npm run lint
+```
+
+---
+
+## Development Workflow
+
+A typical BugFlow workflow is:
+
+```text
+Create Project
+      ↓
+Add Team Members
+      ↓
+Create Sprint
+      ↓
+Report Bug
+      ↓
+AI Analysis
+      ↓
+Classify / Assign Issue
+      ↓
+Kanban Development
+      ↓
+Code Review
+      ↓
+Testing
+      ↓
+Resolve
+      ↓
+Close
+```
+
+Throughout the lifecycle, developers and testers can collaborate through comments, attachments, and the issue activity timeline.
+
+---
+
+## What This Project Demonstrates
+
+BugFlow demonstrates practical implementation of:
+
+* Full-stack React development
+* Spring Boot REST API development
+* PostgreSQL database design
+* JPA/Hibernate
+* JWT authentication
+* Role-based authorization
+* Redis caching
+* Dockerized infrastructure
+* Kanban workflows
+* Sprint management
+* File handling
+* API documentation with OpenAPI
+* AI-powered bug triage
+* Semantic similarity search
+* AI-assisted debugging
+* Automated QA test generation
+* AI-based sprint analysis
+
+The key focus of BugFlow is integrating **AI into an actual software engineering workflow**, rather than treating AI as a standalone chatbot.
+
