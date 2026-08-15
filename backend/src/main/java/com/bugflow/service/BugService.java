@@ -9,7 +9,7 @@ public interface BugService {
     BugResponse createBug(BugRequest request, String currentUsername);
 
     List<BugResponse> searchBugs(Long projectId, String status, String priority, Long assigneeId,
-                                 Long sprintId, String search, String sortBy, String currentUsername);
+                                 Long sprintId, String search, String sortBy, Boolean semantic, String currentUsername);
 
     BugResponse getBugById(Long bugId, String currentUsername);
 

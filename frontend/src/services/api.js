@@ -148,6 +148,7 @@ export const api = {
     if (params.sprintId) query.append('sprintId', params.sprintId);
     if (params.search) query.append('search', params.search);
     if (params.sortBy) query.append('sortBy', params.sortBy);
+    if (params.semantic) query.append('semantic', params.semantic);
 
     return request(`/projects/${projectId}/bugs?${query.toString()}`, {
       method: 'GET',
@@ -278,6 +279,30 @@ export const api = {
 
   analyzeBug: (bugId) =>
     request(`/bugs/${bugId}/ai/analyze`, {
+      method: 'POST',
+      headers: getHeaders()
+    }),
+
+  generateCodeFix: (bugId) =>
+    request(`/bugs/${bugId}/ai/code-fix`, {
+      method: 'POST',
+      headers: getHeaders()
+    }),
+
+  suggestAssignee: (bugId) =>
+    request(`/bugs/${bugId}/ai/suggest-assignee`, {
+      method: 'POST',
+      headers: getHeaders()
+    }),
+
+  summarizeComments: (bugId) =>
+    request(`/bugs/${bugId}/ai/comments-summary`, {
+      method: 'POST',
+      headers: getHeaders()
+    }),
+
+  generateTestCases: (bugId) =>
+    request(`/bugs/${bugId}/ai/test-cases`, {
       method: 'POST',
       headers: getHeaders()
     }),

@@ -34,6 +34,7 @@ public class BugServiceImpl implements BugService {
     private final AttachmentRepository attachmentRepository;
     private final ActivityLogRepository activityLogRepository;
     private final NotificationService notificationService;
+    private final BugEmbeddingRepository bugEmbeddingRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
@@ -48,7 +49,8 @@ public class BugServiceImpl implements BugService {
                           CommentRepository commentRepository,
                           AttachmentRepository attachmentRepository,
                           ActivityLogRepository activityLogRepository,
-                          NotificationService notificationService) {
+                          NotificationService notificationService,
+                          BugEmbeddingRepository bugEmbeddingRepository) {
         this.bugRepository = bugRepository;
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
@@ -57,6 +59,7 @@ public class BugServiceImpl implements BugService {
         this.attachmentRepository = attachmentRepository;
         this.activityLogRepository = activityLogRepository;
         this.notificationService = notificationService;
+        this.bugEmbeddingRepository = bugEmbeddingRepository;
 
         // Define files storage location relative to runtime root (inside project directory)
         this.fileStorageLocation = Paths.get("uploads").toAbsolutePath().normalize();
@@ -198,9 +201,9 @@ public class BugServiceImpl implements BugService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "bugSearch", key = "#projectId + '-' + #status + '-' + #priority + '-' + #assigneeId + '-' + #sprintId + '-' + #search + '-' + #sortBy")
+    @Cacheable(value = "bugSearch", key = "#projectId + '-' + #status + '-' + #priority + '-' + #assigneeId + '-' + #sprintId + '-' + #search + '-' + #sortBy + '-' + #semantic")
     public List<BugResponse> searchBugs(Long projectId, String status, String priority, Long assigneeId,
-                                         Long sprintId, String search, String sortBy, String currentUsername) {
+                                         Long sprintId, String search, String sortBy, Boolean semantic, String currentUsername) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + projectId));
 
@@ -217,6 +220,32 @@ public class BugServiceImpl implements BugService {
         BugPriority bugPriority = null;
         if (priority != null && !priority.isEmpty()) {
             bugPriority = BugPriority.valueOf(priority.toUpperCase());
+        }
+
+        boolean isSemantic = semantic != null && semantic;
+
+        if (isSemantic && search != null && !search.trim().isEmpty()) {
+            double[] queryVector = aiIssueService.getEmbedding(search);
+            List<BugEmbedding> projectEmbeddings = bugEmbeddingRepository.findAllByProjectId(projectId);
+            
+            java.util.List<BugResponse> results = new java.util.ArrayList<>();
+            for (BugEmbedding current : projectEmbeddings) {
+                Bug bug = current.getBug();
+                
+                if (bugStatus != null && bug.getStatus() != bugStatus) continue;
+                if (bugPriority != null && bug.getPriority() != bugPriority) continue;
+                if (assigneeId != null && (bug.getAssignee() == null || !bug.getAssignee().getId().equals(assigneeId))) continue;
+                if (sprintId != null && (bug.getSprint() == null || !bug.getSprint().getId().equals(sprintId))) continue;
+
+                double similarity = aiIssueService.cosineSimilarity(queryVector, current.getEmbedding());
+                if (similarity >= 0.25) {
+                    BugResponse response = BugResponse.fromBug(bug);
+                    response.setSimilarity(similarity);
+                    results.add(response);
+                }
+            }
+            results.sort((a, b) -> Double.compare(b.getSimilarity(), a.getSimilarity()));
+            return results;
         }
 
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");

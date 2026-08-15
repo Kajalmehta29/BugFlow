@@ -37,6 +37,7 @@ export default function Kanban() {
   const [assigneeFilter, setAssigneeFilter] = useState('');
   const [sprintFilter, setSprintFilter] = useState('');
   const [sortBy, setSortBy] = useState('createdAt,desc');
+  const [semanticSearch, setSemanticSearch] = useState(false);
 
   // Modal control states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -69,7 +70,8 @@ export default function Kanban() {
         assigneeId: assigneeFilter,
         sprintId: sprintFilter,
         search: search,
-        sortBy: sortBy
+        sortBy: sortBy,
+        semantic: semanticSearch
       };
       const bugsList = await api.getBugs(activeProject.id, params);
       setBugs(bugsList);
@@ -90,7 +92,7 @@ export default function Kanban() {
 
   useEffect(() => {
     loadBoardData();
-  }, [activeProject, statusFilter, priorityFilter, assigneeFilter, sprintFilter, sortBy]);
+  }, [activeProject, statusFilter, priorityFilter, assigneeFilter, sprintFilter, sortBy, semanticSearch]);
 
   // Debounced search trigger
   useEffect(() => {
@@ -267,14 +269,41 @@ export default function Kanban() {
 
       {/* SEARCH AND FILTERS TOOLBAR */}
       <div className="filters-toolbar glass-panel animate-fade-in">
-        <div className="search-box-wrapper">
-          <Search size={16} className="search-icon" />
-          <input 
-            type="text" 
-            placeholder="Search by title or description..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="search-box-wrapper" style={{ display: 'flex', alignItems: 'center', flex: 1, padding: 0, background: 'transparent', border: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', position: 'relative', flex: 1, border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-panel, rgba(0,0,0,0.03))', padding: '6px 12px' }}>
+            <Search size={16} className="search-icon" style={{ position: 'absolute', left: '12px', color: 'var(--text-secondary)' }} />
+            <input 
+              type="text" 
+              placeholder={semanticSearch ? "🔮 AI Semantic Search..." : "Search by title or description..."} 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', paddingLeft: '24px', paddingRight: '28px', fontSize: '13px', color: 'var(--text-primary)' }}
+            />
+            <button
+              type="button"
+              onClick={() => setSemanticSearch(!semanticSearch)}
+              style={{
+                position: 'absolute',
+                right: '12px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '4px',
+                borderRadius: '4px',
+                color: semanticSearch ? 'var(--color-primary, #6366f1)' : 'var(--text-secondary, #94a3b8)',
+                transition: 'all 0.2s ease',
+              }}
+              title={semanticSearch ? "Disable AI Semantic Search" : "Enable AI Semantic Search"}
+            >
+              <Sparkles size={16} style={{ 
+                animation: semanticSearch ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
+                color: semanticSearch ? 'var(--color-primary)' : 'var(--text-secondary)'
+              }} />
+            </button>
+          </div>
         </div>
         
         <div className="filters-group">
@@ -371,10 +400,25 @@ export default function Kanban() {
                               />
                             </div>
                           )}
-                        <div className="bug-card-top">
-                          <span className={`badge ${getPriorityBadgeClass(bug.priority)}`}>
-                            {bug.priority}
-                          </span>
+                        <div className="bug-card-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <span className={`badge ${getPriorityBadgeClass(bug.priority)}`}>
+                              {bug.priority}
+                            </span>
+                            {bug.similarity !== undefined && bug.similarity !== null && (
+                              <span style={{ 
+                                padding: '2px 6px', 
+                                borderRadius: '4px', 
+                                background: 'rgba(16, 185, 129, 0.15)', 
+                                color: '#10b981', 
+                                fontSize: '10px', 
+                                fontWeight: 'bold',
+                                border: '1px solid rgba(16, 185, 129, 0.3)'
+                              }}>
+                                {Math.round(bug.similarity * 100)}% Match
+                              </span>
+                            )}
+                          </div>
                           <span className="bug-card-id">#{bug.id}</span>
                         </div>
                         <h4 className="bug-card-title">{bug.title}</h4>

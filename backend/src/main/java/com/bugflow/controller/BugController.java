@@ -66,8 +66,9 @@ public class BugController {
                                                         @RequestParam(required = false) Long sprintId,
                                                         @RequestParam(required = false) String search,
                                                         @RequestParam(required = false) String sortBy,
+                                                        @RequestParam(required = false, defaultValue = "false") Boolean semantic,
                                                         @AuthenticationPrincipal UserDetails userDetails) {
-        List<BugResponse> response = bugService.searchBugs(projectId, status, priority, assigneeId, sprintId, search, sortBy, userDetails.getUsername());
+        List<BugResponse> response = bugService.searchBugs(projectId, status, priority, assigneeId, sprintId, search, sortBy, semantic, userDetails.getUsername());
         return ResponseEntity.ok(response);
     }
 

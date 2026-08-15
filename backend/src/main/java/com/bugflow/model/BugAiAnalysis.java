@@ -1,5 +1,6 @@
 package com.bugflow.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -11,6 +12,7 @@ public class BugAiAnalysis {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bug_id", unique = true, nullable = false)
     private Bug bug;
@@ -47,6 +49,24 @@ public class BugAiAnalysis {
 
     @Column(name = "technical_details", columnDefinition = "TEXT")
     private String technicalDetails;
+
+    @Column(name = "root_cause", columnDefinition = "TEXT")
+    private String rootCause;
+
+    @Column(name = "code_fix_suggestion", columnDefinition = "TEXT")
+    private String codeFixSuggestion;
+
+    @Column(name = "suggested_assignee", length = 100)
+    private String suggestedAssignee;
+
+    @Column(name = "assignee_rationale", columnDefinition = "TEXT")
+    private String assigneeRationale;
+
+    @Column(name = "comment_summary", columnDefinition = "TEXT")
+    private String commentSummary;
+
+    @Column(name = "qa_test_cases", columnDefinition = "TEXT")
+    private String qaTestCases;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -178,6 +198,54 @@ public class BugAiAnalysis {
 
     public void setTechnicalDetails(String technicalDetails) {
         this.technicalDetails = technicalDetails;
+    }
+
+    public String getRootCause() {
+        return rootCause;
+    }
+
+    public void setRootCause(String rootCause) {
+        this.rootCause = rootCause;
+    }
+
+    public String getCodeFixSuggestion() {
+        return codeFixSuggestion;
+    }
+
+    public void setCodeFixSuggestion(String codeFixSuggestion) {
+        this.codeFixSuggestion = codeFixSuggestion;
+    }
+
+    public String getSuggestedAssignee() {
+        return suggestedAssignee;
+    }
+
+    public void setSuggestedAssignee(String suggestedAssignee) {
+        this.suggestedAssignee = suggestedAssignee;
+    }
+
+    public String getAssigneeRationale() {
+        return assigneeRationale;
+    }
+
+    public void setAssigneeRationale(String assigneeRationale) {
+        this.assigneeRationale = assigneeRationale;
+    }
+
+    public String getCommentSummary() {
+        return commentSummary;
+    }
+
+    public void setCommentSummary(String commentSummary) {
+        this.commentSummary = commentSummary;
+    }
+
+    public String getQaTestCases() {
+        return qaTestCases;
+    }
+
+    public void setQaTestCases(String qaTestCases) {
+        this.qaTestCases = qaTestCases;
     }
 
     public LocalDateTime getCreatedAt() {

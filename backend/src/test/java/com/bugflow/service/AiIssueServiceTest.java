@@ -25,7 +25,8 @@ public class AiIssueServiceTest {
                 Mockito.mock(com.bugflow.repository.SprintRepository.class),
                 Mockito.mock(com.bugflow.service.ai.GeminiAiProvider.class),
                 localAiProvider,
-                new com.fasterxml.jackson.databind.ObjectMapper()
+                new com.fasterxml.jackson.databind.ObjectMapper(),
+                Mockito.mock(com.bugflow.repository.CommentRepository.class)
         );
     }
 

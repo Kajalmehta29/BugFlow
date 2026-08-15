@@ -16,7 +16,14 @@ import {
   Loader2,
   Trash2,
   FileText,
-  Sparkles
+  Sparkles,
+  Code2,
+  Copy,
+  Check,
+  Wrench,
+  CheckSquare,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMembers, sprints }) {
@@ -34,6 +41,23 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
   const [similarBugs, setSimilarBugs] = useState([]);
+  const [fixLoading, setFixLoading] = useState(false);
+  const [fixError, setFixError] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [assigneeLoading, setAssigneeLoading] = useState(false);
+  const [assigneeError, setAssigneeError] = useState('');
+  const [commentsSummaryLoading, setCommentsSummaryLoading] = useState(false);
+  const [commentsSummaryError, setCommentsSummaryError] = useState('');
+  const [qaLoading, setQaLoading] = useState(false);
+  const [qaError, setQaError] = useState('');
+
+  // Collapse/Expand state hooks for AI Insights panels
+  const [classCollapsed, setClassCollapsed] = useState(false);
+  const [assigneeCollapsed, setAssigneeCollapsed] = useState(false);
+  const [duplicatesCollapsed, setDuplicatesCollapsed] = useState(false);
+  const [summaryCollapsed, setSummaryCollapsed] = useState(false);
+  const [fixCollapsed, setFixCollapsed] = useState(false);
+  const [testCasesCollapsed, setTestCasesCollapsed] = useState(false);
 
   // Interaction states
   const [activeTab, setActiveTab] = useState('comments'); // 'comments', 'timeline', 'attachments', 'ai'
@@ -110,6 +134,97 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
       setAiError(err.message || 'Re-analysis failed');
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const handleGenerateFix = async () => {
+    if (!bug) return;
+    setFixLoading(true);
+    setFixError('');
+    try {
+      const data = await api.generateCodeFix(bugId);
+      setAiAnalysis(data);
+    } catch (err) {
+      setFixError(err.message || 'Failed to generate code fix suggestion');
+    } finally {
+      setFixLoading(false);
+    }
+  };
+
+  const handleCopyCode = (text) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSuggestAssignee = async () => {
+    if (!bug) return;
+    setAssigneeLoading(true);
+    setAssigneeError('');
+    try {
+      const data = await api.suggestAssignee(bugId);
+      setAiAnalysis(data);
+    } catch (err) {
+      setAssigneeError(err.message || 'Failed to suggest assignee');
+    } finally {
+      setAssigneeLoading(false);
+    }
+  };
+
+  const handleApplyAssignee = async () => {
+    if (!aiAnalysis || !aiAnalysis.suggestedAssignee || !bug) return;
+    const recommendedUser = projectMembers.find(
+      m => m.username.toLowerCase() === aiAnalysis.suggestedAssignee.toLowerCase()
+    );
+    if (!recommendedUser) {
+      setError(`Cannot assign: Member with username "${aiAnalysis.suggestedAssignee}" was not found in the project.`);
+      return;
+    }
+    setError('');
+    try {
+      await api.updateBug(
+        bugId,
+        activeProject.id,
+        bug.title,
+        bug.description,
+        bug.priority,
+        bug.severity,
+        recommendedUser.id,
+        bug.sprint ? bug.sprint.id : null
+      );
+      await loadBugData();
+      onBugUpdated();
+    } catch (err) {
+      setError(err.message || 'Failed to update assignee');
+    }
+  };
+
+  const handleSummarizeComments = async () => {
+    if (!bug) return;
+    setCommentsSummaryLoading(true);
+    setCommentsSummaryError('');
+    try {
+      const data = await api.summarizeComments(bugId);
+      setAiAnalysis(data);
+    } catch (err) {
+      setCommentsSummaryError(err.message || 'Failed to summarize comment thread');
+    } finally {
+      setCommentsSummaryLoading(false);
+    }
+  };
+
+  const handleGenerateTestCases = async () => {
+    if (!bug) return;
+    setQaLoading(true);
+    setQaError('');
+    try {
+      const data = await api.generateTestCases(bugId);
+      setAiAnalysis(data);
+    } catch (err) {
+      setQaError(err.message || 'Failed to generate QA test cases');
+    } finally {
+      setQaLoading(false);
     }
   };
 
@@ -480,6 +595,59 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
                       </button>
                     </form>
 
+                    {/* AI Comments Thread Summarizer */}
+                    {comments.length >= 3 && (
+                      <div className="glass-panel" style={{ padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px', background: 'var(--bg-hover)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Sparkles size={14} />
+                            <span>AI Conversation Summary</span>
+                          </span>
+                          {aiAnalysis?.commentSummary && !commentsSummaryLoading && (
+                            <button 
+                              type="button" 
+                              className="btn btn-secondary btn-sm" 
+                              onClick={handleSummarizeComments}
+                              style={{ padding: '2px 8px', fontSize: '10px' }}
+                            >
+                              Re-Summarize
+                            </button>
+                          )}
+                        </div>
+
+                        {commentsSummaryLoading ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0' }}>
+                            <Loader2 className="animate-spin" size={16} style={{ color: 'var(--color-primary)' }} />
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Condensing the discussion...</span>
+                          </div>
+                        ) : commentsSummaryError ? (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#ef4444' }}>
+                            <span>{commentsSummaryError}</span>
+                            <button type="button" className="btn btn-secondary btn-sm" onClick={handleSummarizeComments} style={{ padding: '1px 6px', fontSize: '9px' }}>
+                              Retry
+                            </button>
+                          </div>
+                        ) : aiAnalysis?.commentSummary ? (
+                          <div style={{ fontSize: '12px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
+                            {aiAnalysis.commentSummary}
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>This ticket has a long conversation. Let AI summarize it for you.</span>
+                            <button 
+                              type="button" 
+                              className="btn btn-primary btn-sm" 
+                              onClick={handleSummarizeComments}
+                              style={{ padding: '2px 10px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <Sparkles size={10} />
+                              <span>Summarize Thread</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="comments-list">
                       {comments.length === 0 ? (
                         <div className="empty-tab-state">No comments yet. Start the conversation!</div>
@@ -605,86 +773,324 @@ export default function BugDetailModal({ bugId, onClose, onBugUpdated, projectMe
 
                         {/* Classification Info */}
                         <div className="glass-panel" style={{ padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '20px', background: 'var(--bg-hover)' }}>
-                          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', fontWeight: 'bold' }}>Suggested Classification</h4>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', fontSize: '13px' }}>
-                            <div><strong>Category:</strong> {aiAnalysis.category || 'General'}</div>
-                            <div><strong>Component:</strong> {aiAnalysis.component || 'General / Core'}</div>
-                            <div><strong>Suggested Severity:</strong> {aiAnalysis.suggestedSeverity}</div>
-                            <div><strong>Suggested Priority:</strong> {aiAnalysis.suggestedPriority}</div>
-                          </div>
-                          {aiAnalysis.keywords && (
-                            <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
-                              <strong style={{ fontSize: '12px', color: 'var(--text-secondary)', marginRight: '6px' }}>Keywords:</strong>
-                              {aiAnalysis.keywords.split(',').map((kw, idx) => (
-                                <span key={idx} style={{ padding: '2px 8px', borderRadius: '4px', background: 'var(--border-color)', border: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--text-primary)' }}>
-                                  {kw.trim()}
-                                </span>
-                              ))}
+                          <h4 
+                            style={{ margin: '0 0 12px 0', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                            onClick={() => setClassCollapsed(!classCollapsed)}
+                          >
+                            <span>Suggested Classification</span>
+                            {classCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                          </h4>
+                          {!classCollapsed && (
+                            <>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', fontSize: '13px', marginTop: '12px' }}>
+                                <div><strong>Category:</strong> {aiAnalysis.category || 'General'}</div>
+                                <div><strong>Component:</strong> {aiAnalysis.component || 'General / Core'}</div>
+                                <div><strong>Suggested Severity:</strong> {aiAnalysis.suggestedSeverity}</div>
+                                <div><strong>Suggested Priority:</strong> {aiAnalysis.suggestedPriority}</div>
+                              </div>
+                              {aiAnalysis.keywords && (
+                                <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                  <strong style={{ fontSize: '12px', color: 'var(--text-secondary)', marginRight: '6px' }}>Keywords:</strong>
+                                  {aiAnalysis.keywords.split(',').map((kw, idx) => (
+                                    <span key={idx} style={{ padding: '2px 8px', borderRadius: '4px', background: 'var(--border-color)', border: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--text-primary)' }}>
+                                      {kw.trim()}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        {/* AI Assignee Recommendation */}
+                        <div className="glass-panel" style={{ padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '20px', background: 'var(--bg-hover)' }}>
+                          <h4 
+                            style={{ margin: '0 0 12px 0', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                            onClick={() => setAssigneeCollapsed(!assigneeCollapsed)}
+                          >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <User size={16} />
+                              <span>AI Assignee Recommendation</span>
+                            </span>
+                            {assigneeCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                          </h4>
+
+                          {!assigneeCollapsed && (
+                            <div style={{ marginTop: '12px' }}>
+                              {assigneeLoading ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '20px 0' }}>
+                                  <Loader2 className="animate-spin" size={24} style={{ color: 'var(--color-primary)' }} />
+                                  <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Analyzing developer workloads and project expertise...</span>
+                                </div>
+                              ) : assigneeError ? (
+                                <div className="feedback-box error-box" style={{ fontSize: '12px', padding: '8px 12px' }}>
+                                  <div>{assigneeError}</div>
+                                  <button type="button" className="btn btn-secondary btn-sm" onClick={handleSuggestAssignee} style={{ marginTop: '6px', padding: '2px 8px', fontSize: '11px' }}>
+                                    Retry
+                                  </button>
+                                </div>
+                              ) : aiAnalysis.suggestedAssignee ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', lineHeight: '1.5' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                      <strong>Recommended Developer:</strong>{' '}
+                                      <span style={{ 
+                                        padding: '2px 8px', 
+                                        borderRadius: '4px', 
+                                        background: 'var(--color-primary-light, rgba(79, 70, 229, 0.1))', 
+                                        color: 'var(--color-primary)', 
+                                        fontWeight: 'bold',
+                                        fontSize: '12px'
+                                      }}>
+                                        @{aiAnalysis.suggestedAssignee}
+                                      </span>
+                                    </div>
+                                    {canEdit && bug.assignee?.username?.toLowerCase() !== aiAnalysis.suggestedAssignee.toLowerCase() && aiAnalysis.suggestedAssignee.toLowerCase() !== 'unassigned' && (
+                                      <button 
+                                        type="button" 
+                                        className="btn btn-primary btn-sm" 
+                                        onClick={handleApplyAssignee}
+                                        style={{ padding: '3px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                      >
+                                        Assign Ticket to @{aiAnalysis.suggestedAssignee}
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div style={{ background: 'var(--bg-panel, rgba(0,0,0,0.08))', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '12px' }}>
+                                    <strong>Rationale:</strong> {aiAnalysis.assigneeRationale}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '12px 0' }}>
+                                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Unsure who should take this ticket?</span>
+                                  <button 
+                                    type="button" 
+                                    className="btn btn-primary btn-sm" 
+                                    onClick={handleSuggestAssignee} 
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <Sparkles size={14} />
+                                    <span>Get Assignee Recommendation</span>
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
 
                         {/* Duplicates Section */}
                         <div className="glass-panel" style={{ padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '20px', background: 'var(--bg-hover)' }}>
-                          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', fontWeight: 'bold' }}>Possible Duplicate Issues</h4>
-                          {similarBugs && similarBugs.length > 0 ? (
-                            <ul style={{ paddingLeft: '16px', margin: 0, fontSize: '13px' }}>
-                              {similarBugs.map(dup => (
-                                <li key={dup.id} style={{ marginBottom: '8px' }}>
-                                  <span style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>#{dup.id}</span> - {dup.title}
-                                  <span style={{ marginLeft: '8px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '11px', fontWeight: 'bold' }}>
-                                    {Math.round(dup.similarity * 100)}% Similarity
-                                  </span>
-                                  <span style={{ marginLeft: '8px', padding: '1px 6px', borderRadius: '4px', background: 'var(--border-color)', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                    {dup.status}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>No potential duplicates found above 80% similarity.</div>
+                          <h4 
+                            style={{ margin: '0 0 12px 0', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                            onClick={() => setDuplicatesCollapsed(!duplicatesCollapsed)}
+                          >
+                            <span>Possible Duplicate Issues</span>
+                            {duplicatesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                          </h4>
+                          {!duplicatesCollapsed && (
+                            <div style={{ marginTop: '12px' }}>
+                              {similarBugs && similarBugs.length > 0 ? (
+                                <ul style={{ paddingLeft: '16px', margin: 0, fontSize: '13px' }}>
+                                  {similarBugs.map(dup => (
+                                    <li key={dup.id} style={{ marginBottom: '8px' }}>
+                                      <span style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>#{dup.id}</span> - {dup.title}
+                                      <span style={{ marginLeft: '8px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '11px', fontWeight: 'bold' }}>
+                                        {Math.round(dup.similarity * 100)}% Similarity
+                                      </span>
+                                      <span style={{ marginLeft: '8px', padding: '1px 6px', borderRadius: '4px', background: 'var(--border-color)', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                        {dup.status}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>No potential duplicates found above 80% similarity.</div>
+                              )}
+                            </div>
                           )}
                         </div>
 
                         {/* Structured Summary Section */}
-                        <div className="glass-panel" style={{ padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-hover)' }}>
+                        <div className="glass-panel" style={{ padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-hover)', marginTop: '20px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px' }}>
-                            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>AI-Generated Structured Summary</h4>
-                            <button type="button" className="btn btn-primary btn-sm" onClick={handleApplyAiSummary} style={{ fontSize: '11px', padding: '4px 10px' }}>
-                              Apply Summary to Ticket
-                            </button>
+                            <h4 
+                              style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1, userSelect: 'none' }}
+                              onClick={() => setSummaryCollapsed(!summaryCollapsed)}
+                            >
+                              <span>AI-Generated Structured Summary</span>
+                              {summaryCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                            </h4>
+                            {!summaryCollapsed && (
+                              <button type="button" className="btn btn-primary btn-sm" onClick={handleApplyAiSummary} style={{ fontSize: '11px', padding: '4px 10px' }}>
+                                Apply Summary to Ticket
+                              </button>
+                            )}
                           </div>
                           
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', lineHeight: '1.5' }}>
-                            <div>
-                              <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Summary Title</strong>
-                              <div>{aiAnalysis.summaryTitle || 'N/A'}</div>
-                            </div>
-                            <div>
-                              <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Problem Summary</strong>
-                              <div>{aiAnalysis.problemSummary || 'N/A'}</div>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          {!summaryCollapsed && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', lineHeight: '1.5' }}>
                               <div>
-                                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Expected Behavior</strong>
-                                <div>{aiAnalysis.expectedBehavior || 'N/A'}</div>
+                                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Summary Title</strong>
+                                <div>{aiAnalysis.summaryTitle || 'N/A'}</div>
                               </div>
                               <div>
-                                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Actual Behavior</strong>
-                                <div>{aiAnalysis.actualBehavior || 'N/A'}</div>
+                                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Problem Summary</strong>
+                                <div>{aiAnalysis.problemSummary || 'N/A'}</div>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div>
+                                  <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Expected Behavior</strong>
+                                  <div>{aiAnalysis.expectedBehavior || 'N/A'}</div>
+                                </div>
+                                <div>
+                                  <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Actual Behavior</strong>
+                                  <div>{aiAnalysis.actualBehavior || 'N/A'}</div>
+                                </div>
+                              </div>
+                              <div>
+                                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Steps to Reproduce</strong>
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{aiAnalysis.stepsToReproduce || 'N/A'}</div>
+                              </div>
+                              <div>
+                                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Technical Details</strong>
+                                <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-panel, rgba(0,0,0,0.15))', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                                  {aiAnalysis.technicalDetails || 'N/A'}
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Steps to Reproduce</strong>
-                              <div style={{ whiteSpace: 'pre-wrap' }}>{aiAnalysis.stepsToReproduce || 'N/A'}</div>
+                          )}
+                        </div>
+
+                        {/* AI Root-Cause & Code Fix Section */}
+                        <div className="glass-panel" style={{ padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-hover)', marginTop: '20px' }}>
+                          <h4 
+                            style={{ margin: '0 0 12px 0', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                            onClick={() => setFixCollapsed(!fixCollapsed)}
+                          >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Code2 size={16} />
+                              <span>AI Root-Cause & Code Fix Suggestion</span>
+                            </span>
+                            {fixCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                          </h4>
+
+                          {!fixCollapsed && (
+                            <div style={{ marginTop: '12px' }}>
+                              {fixLoading ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '20px 0' }}>
+                                  <Loader2 className="animate-spin" size={24} style={{ color: 'var(--color-primary)' }} />
+                                  <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Analyzing logs and patterns for code fix...</span>
+                                </div>
+                              ) : fixError ? (
+                                <div className="feedback-box error-box" style={{ fontSize: '12px', padding: '8px 12px' }}>
+                                  <div>{fixError}</div>
+                                  <button type="button" className="btn btn-secondary btn-sm" onClick={handleGenerateFix} style={{ marginTop: '6px', padding: '2px 8px', fontSize: '11px' }}>
+                                    Retry
+                                  </button>
+                                </div>
+                              ) : aiAnalysis.codeFixSuggestion ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', lineHeight: '1.5' }}>
+                                  <div>
+                                    <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '4px' }}>Estimated Root Cause</strong>
+                                    <div style={{ background: 'var(--bg-panel, rgba(0,0,0,0.08))', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                                      {aiAnalysis.rootCause}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                      <strong style={{ color: 'var(--color-primary)', fontSize: '12px' }}>Suggested Code Fix</strong>
+                                      <button 
+                                        type="button" 
+                                        className="btn btn-secondary btn-sm" 
+                                        onClick={() => handleCopyCode(aiAnalysis.codeFixSuggestion)}
+                                        style={{ padding: '2px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                      >
+                                        {copied ? <Check size={12} /> : <Copy size={12} />}
+                                        <span>{copied ? 'Copied!' : 'Copy Code'}</span>
+                                      </button>
+                                    </div>
+                                    <pre style={{ 
+                                      margin: 0, 
+                                      padding: '12px', 
+                                      borderRadius: '6px', 
+                                      background: '#1e1e1e', 
+                                      color: '#d4d4d4', 
+                                      border: '1px solid var(--border-color)', 
+                                      overflowX: 'auto', 
+                                      fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
+                                      fontSize: '12px' 
+                                    }}>
+                                      <code>{aiAnalysis.codeFixSuggestion}</code>
+                                    </pre>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '12px 0' }}>
+                                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Need a starting point to debug this issue?</span>
+                                  <button 
+                                    type="button" 
+                                    className="btn btn-primary btn-sm" 
+                                    onClick={handleGenerateFix} 
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <Wrench size={14} />
+                                    <span>Suggest Code Fix & RCA</span>
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                            <div>
-                              <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '12px', marginBottom: '2px' }}>Technical Details</strong>
-                              <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-panel, rgba(0,0,0,0.15))', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
-                                {aiAnalysis.technicalDetails || 'N/A'}
-                              </div>
+                          )}
+                        </div>
+
+                        {/* AI-Generated QA Test Cases Section */}
+                        <div className="glass-panel" style={{ padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-hover)', marginTop: '20px' }}>
+                          <h4 
+                            style={{ margin: '0 0 12px 0', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                            onClick={() => setTestCasesCollapsed(!testCasesCollapsed)}
+                          >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <CheckSquare size={16} />
+                              <span>AI-Generated QA Verification Test Cases</span>
+                            </span>
+                            {testCasesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                          </h4>
+
+                          {!testCasesCollapsed && (
+                            <div style={{ marginTop: '12px' }}>
+                              {qaLoading ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '20px 0' }}>
+                                  <Loader2 className="animate-spin" size={24} style={{ color: 'var(--color-primary)' }} />
+                                  <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Generating verification steps and expected conditions...</span>
+                                </div>
+                              ) : qaError ? (
+                                <div className="feedback-box error-box" style={{ fontSize: '12px', padding: '8px 12px' }}>
+                                  <div>{qaError}</div>
+                                  <button type="button" className="btn btn-secondary btn-sm" onClick={handleGenerateTestCases} style={{ marginTop: '6px', padding: '2px 8px', fontSize: '11px' }}>
+                                    Retry
+                                  </button>
+                                </div>
+                              ) : aiAnalysis.qaTestCases ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', lineHeight: '1.5' }}>
+                                  <div style={{ background: 'var(--bg-panel, rgba(0,0,0,0.08))', padding: '12px', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '12.5px', whiteSpace: 'pre-wrap' }}>
+                                    {aiAnalysis.qaTestCases}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '12px 0' }}>
+                                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Want step-by-step QA test instructions to verify this fix?</span>
+                                  <button 
+                                    type="button" 
+                                    className="btn btn-primary btn-sm" 
+                                    onClick={handleGenerateTestCases} 
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <CheckSquare size={14} />
+                                    <span>Generate QA Test Cases</span>
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                          </div>
+                          )}
                         </div>
                       </div>
                     ) : (

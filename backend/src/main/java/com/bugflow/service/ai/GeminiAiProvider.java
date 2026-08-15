@@ -33,7 +33,7 @@ public class GeminiAiProvider implements AiProvider {
             throw new IllegalStateException("Gemini API key is not configured. Please set GEMINI_API_KEY environment variable.");
         }
 
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + key;
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=" + key;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

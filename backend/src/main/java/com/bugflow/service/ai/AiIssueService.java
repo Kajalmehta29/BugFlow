@@ -27,6 +27,7 @@ public class AiIssueService {
     private final GeminiAiProvider geminiAiProvider;
     private final LocalAiProvider localAiProvider;
     private final ObjectMapper objectMapper;
+    private final CommentRepository commentRepository;
 
     private AllMiniLmL6V2EmbeddingModel embeddingModel;
     private boolean isEmbeddingModelReady = false;
@@ -38,7 +39,8 @@ public class AiIssueService {
                            SprintRepository sprintRepository,
                            GeminiAiProvider geminiAiProvider,
                            LocalAiProvider localAiProvider,
-                           ObjectMapper objectMapper) {
+                           ObjectMapper objectMapper,
+                           CommentRepository commentRepository) {
         this.bugRepository = bugRepository;
         this.bugEmbeddingRepository = bugEmbeddingRepository;
         this.bugAiAnalysisRepository = bugAiAnalysisRepository;
@@ -47,6 +49,7 @@ public class AiIssueService {
         this.geminiAiProvider = geminiAiProvider;
         this.localAiProvider = localAiProvider;
         this.objectMapper = objectMapper;
+        this.commentRepository = commentRepository;
     }
 
     @PostConstruct
@@ -256,7 +259,6 @@ public class AiIssueService {
      * Fetch existing AI analysis or trigger it.
      */
     @Transactional
-    @Cacheable(value = "aiAnalysis", key = "#bugId")
     public BugAiAnalysis getOrAnalyzeBug(Long bugId) {
         Bug bug = bugRepository.findById(bugId)
                 .orElseThrow(() -> new NoSuchElementException("Bug not found: " + bugId));
@@ -266,14 +268,225 @@ public class AiIssueService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "aiAnalysis", key = "#bugId"),
-        @CacheEvict(value = "duplicateDetections", key = "#bugId")
-    })
+    @CacheEvict(value = "duplicateDetections", key = "#bugId")
     public BugAiAnalysis reanalyzeBug(Long bugId) {
         Bug bug = bugRepository.findById(bugId)
                 .orElseThrow(() -> new NoSuchElementException("Bug not found: " + bugId));
         return analyzeAndSaveBug(bug);
+    }
+
+    @Transactional
+    public BugAiAnalysis generateCodeFix(Long bugId) {
+        Bug bug = bugRepository.findById(bugId)
+                .orElseThrow(() -> new NoSuchElementException("Bug not found: " + bugId));
+
+        BugAiAnalysis analysis = bugAiAnalysisRepository.findByBugId(bugId)
+                .orElseGet(() -> new BugAiAnalysis(bug));
+
+        String prompt = String.format(
+                "You are an expert software developer and system architect. Analyze the following bug report " +
+                "and provide a detailed Root Cause Analysis (RCA) and a practical, high-quality code fix suggestion.\n\n" +
+                "Title: %s\n" +
+                "Description: %s\n\n" +
+                "Respond ONLY with a valid JSON object matching this schema:\n" +
+                "{\n" +
+                "  \"rootCause\": \"Detailed explanation of why this bug occurs based on the description, error logs, or stack trace.\",\n" +
+                "  \"codeFixSuggestion\": \"Markdown formatted code snippet or patch showing the exact code changes required to fix the issue.\"\n" +
+                "}\n" +
+                "Do NOT add any markdown wrapping (like ```json), commentary, or extra text. Just raw JSON.\n",
+                bug.getTitle(), bug.getDescription()
+        );
+
+        try {
+            String rawJson = getActiveAiProvider().generateText(prompt);
+            rawJson = cleanJsonString(rawJson);
+            
+            CodeFixResponse response = objectMapper.readValue(rawJson, CodeFixResponse.class);
+            analysis.setRootCause(response.getRootCause());
+            analysis.setCodeFixSuggestion(response.getCodeFixSuggestion());
+        } catch (Exception e) {
+            System.err.println("[AiIssueService] Suggest code fix failed, falling back to local: " + e.getMessage());
+            analysis.setRootCause("Unable to perform deep root cause analysis at this time. Please verify logs manually.");
+            analysis.setCodeFixSuggestion("```java\n// Hardcoded fallback suggestion:\n// Please inspect the stack trace and verify database configurations or input validation.\n```");
+        }
+
+        analysis.setUpdatedAt(LocalDateTime.now());
+        return bugAiAnalysisRepository.save(analysis);
+    }
+
+    @Transactional
+    public BugAiAnalysis suggestAssignee(Long bugId) {
+        Bug bug = bugRepository.findById(bugId)
+                .orElseThrow(() -> new NoSuchElementException("Bug not found: " + bugId));
+
+        BugAiAnalysis analysis = bugAiAnalysisRepository.findByBugId(bugId)
+                .orElseGet(() -> new BugAiAnalysis(bug));
+
+        Project project = bug.getProject();
+        Set<User> members = project.getMembers();
+
+        if (members == null || members.isEmpty()) {
+            analysis.setSuggestedAssignee("Unassigned");
+            analysis.setAssigneeRationale("There are no members assigned to this project. Please add members to the project first.");
+            return bugAiAnalysisRepository.save(analysis);
+        }
+
+        // Build profiles for each member
+        StringBuilder teamProfiles = new StringBuilder();
+        for (User member : members) {
+            long activeBugs = bugRepository.countActiveBugsByAssigneeIdAndProjectId(member.getId(), project.getId());
+            
+            List<Bug> assigneeBugs = bugRepository.findByAssigneeId(member.getId());
+            List<String> resolvedTitles = assigneeBugs.stream()
+                    .filter(b -> b.getStatus() == BugStatus.RESOLVED || b.getStatus() == BugStatus.CLOSED)
+                    .map(Bug::getTitle)
+                    .limit(5)
+                    .collect(Collectors.toList());
+
+            teamProfiles.append(String.format("- Username: %s\n", member.getUsername()));
+            teamProfiles.append(String.format("  Role: %s\n", member.getRole() != null ? member.getRole().name() : "DEVELOPER"));
+            teamProfiles.append(String.format("  Current Workload: %d active issues\n", activeBugs));
+            teamProfiles.append(String.format("  Recently Resolved Issues: %s\n\n", 
+                    resolvedTitles.isEmpty() ? "No recent history" : String.join(", ", resolvedTitles)));
+        }
+
+        String prompt = String.format(
+                "You are an expert Agile Project Manager AI assistant. Your goal is to analyze the bug report below " +
+                "and recommend the single best team member to assign it to from the provided list.\n\n" +
+                "Consider both:\n" +
+                "1. Workload (lower is better, avoid overloading).\n" +
+                "2. Expertise (match the bug's title/description with the titles of issues they resolved recently).\n\n" +
+                "Bug Details:\n" +
+                "Title: %s\n" +
+                "Description: %s\n\n" +
+                "Available Team Members:\n" +
+                "%s\n" +
+                "Respond ONLY with a valid JSON object matching this schema:\n" +
+                "{\n" +
+                "  \"suggestedAssignee\": \"The exact username of the recommended member (must match one of the provided usernames exactly, or 'Unassigned' if none match)\",\n" +
+                "  \"assigneeRationale\": \"A concise, professional explanation explaining why they are recommended based on workload and experience.\"\n" +
+                "}\n" +
+                "Do NOT add any markdown wrapping (like ```json), commentary, or extra text. Just raw JSON.\n",
+                bug.getTitle(), bug.getDescription(), teamProfiles.toString()
+        );
+
+        try {
+            String rawJson = getActiveAiProvider().generateText(prompt);
+            rawJson = cleanJsonString(rawJson);
+            
+            AssigneeRecommendationResponse response = objectMapper.readValue(rawJson, AssigneeRecommendationResponse.class);
+            analysis.setSuggestedAssignee(response.getSuggestedAssignee());
+            analysis.setAssigneeRationale(response.getAssigneeRationale());
+        } catch (Exception e) {
+            System.err.println("[AiIssueService] Suggest assignee failed, falling back to local: " + e.getMessage());
+            User bestUser = null;
+            long minBugs = Long.MAX_VALUE;
+            for (User member : members) {
+                long count = bugRepository.countActiveBugsByAssigneeIdAndProjectId(member.getId(), project.getId());
+                if (count < minBugs) {
+                    minBugs = count;
+                    bestUser = member;
+                }
+            }
+            if (bestUser != null) {
+                analysis.setSuggestedAssignee(bestUser.getUsername());
+                analysis.setAssigneeRationale(String.format("Recommended automatically (fallback) because they have the lowest active workload (%d active issues) in this project.", minBugs));
+            } else {
+                analysis.setSuggestedAssignee("Unassigned");
+                analysis.setAssigneeRationale("No active members found to assign.");
+            }
+        }
+
+        analysis.setUpdatedAt(LocalDateTime.now());
+        return bugAiAnalysisRepository.save(analysis);
+    }
+
+    @Transactional
+    public BugAiAnalysis summarizeComments(Long bugId) {
+        Bug bug = bugRepository.findById(bugId)
+                .orElseThrow(() -> new NoSuchElementException("Bug not found: " + bugId));
+
+        BugAiAnalysis analysis = bugAiAnalysisRepository.findByBugId(bugId)
+                .orElseGet(() -> new BugAiAnalysis(bug));
+
+        List<Comment> comments = commentRepository.findByBugIdOrderByCreatedAtAsc(bugId);
+
+        if (comments == null || comments.isEmpty()) {
+            analysis.setCommentSummary("No comments have been posted on this issue yet.");
+            return bugAiAnalysisRepository.save(analysis);
+        }
+
+        StringBuilder threadText = new StringBuilder();
+        for (Comment comment : comments) {
+            String authorName = comment.getAuthor() != null ? comment.getAuthor().getUsername() : "Unknown User";
+            threadText.append(String.format("[%s] @%s: %s\n", 
+                    comment.getCreatedAt(), authorName, comment.getContent()));
+        }
+
+        String prompt = String.format(
+                "You are an expert Agile Scrum Master AI assistant. Read this bug ticket and the comment history below where developers and testers collaborate.\n\n" +
+                "Provide a clear, brief, bulleted summary (maximum 3-4 bullet points) in Markdown format explaining:\n" +
+                "1. The current status or progress of the bug.\n" +
+                "2. Action items taken or discussed (e.g. John restarted Redis, Alice uploaded screenshots).\n" +
+                "3. Any unresolved blockers or open questions.\n\n" +
+                "Bug Details:\n" +
+                "Title: %s\n" +
+                "Description: %s\n\n" +
+                "Comment History:\n" +
+                "%s\n" +
+                "Respond ONLY with the markdown bullet points. Do NOT add any extra conversational text or intros.\n",
+                bug.getTitle(), bug.getDescription(), threadText.toString()
+        );
+
+        try {
+            String summaryText = getActiveAiProvider().generateText(prompt);
+            analysis.setCommentSummary(summaryText);
+        } catch (Exception e) {
+            System.err.println("[AiIssueService] Summarize comments failed, falling back: " + e.getMessage());
+            analysis.setCommentSummary("Failed to generate comment summary due to an unexpected error. Please inspect comments manually.");
+        }
+
+        analysis.setUpdatedAt(LocalDateTime.now());
+        return bugAiAnalysisRepository.save(analysis);
+    }
+
+    @Transactional
+    public BugAiAnalysis generateQaTestCases(Long bugId) {
+        Bug bug = bugRepository.findById(bugId)
+                .orElseThrow(() -> new NoSuchElementException("Bug not found: " + bugId));
+
+        BugAiAnalysis analysis = bugAiAnalysisRepository.findByBugId(bugId)
+                .orElseGet(() -> new BugAiAnalysis(bug));
+
+        String prompt = String.format(
+                "You are an expert QA Engineer AI assistant. Your goal is to analyze the bug report below " +
+                "and generate 2-3 structured QA test cases to verify the bug is completely resolved.\n\n" +
+                "For each test case, provide:\n" +
+                "1. A descriptive title (e.g. \"TC-01: Verify login fails with invalid password\").\n" +
+                "2. Preconditions (if any).\n" +
+                "3. Step-by-step reproduction/verification instructions (Step 1, Step 2...).\n" +
+                "4. Expected Result (what the correct behavior should be).\n\n" +
+                "Bug Details:\n" +
+                "Title: %s\n" +
+                "Description: %s\n\n" +
+                "Format the response in clean, beautiful Markdown. Use bolding and ordered lists for steps. Do NOT add conversational intros, just output the test cases.",
+                bug.getTitle(), bug.getDescription()
+        );
+
+        try {
+            String testCasesText = getActiveAiProvider().generateText(prompt);
+            analysis.setQaTestCases(testCasesText);
+        } catch (Exception e) {
+            System.err.println("[AiIssueService] Generate QA test cases failed: " + e.getMessage());
+            analysis.setQaTestCases("### Failed to generate test cases automatically.\n\n" +
+                    "**Manual Verification Steps:**\n" +
+                    "1. Read the bug description: \"" + bug.getTitle() + "\"\n" +
+                    "2. Attempt to reproduce the issue locally.\n" +
+                    "3. Apply your fix and verify that the error no longer occurs.");
+        }
+
+        analysis.setUpdatedAt(LocalDateTime.now());
+        return bugAiAnalysisRepository.save(analysis);
     }
 
     private BugAiAnalysis analyzeAndSaveBug(Bug bug) {

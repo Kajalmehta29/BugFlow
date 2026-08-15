@@ -46,6 +46,34 @@ public class AiIssueController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/bugs/{id}/ai/code-fix")
+    public ResponseEntity<BugAiAnalysis> generateCodeFix(@PathVariable Long id,
+                                                         @AuthenticationPrincipal UserDetails userDetails) {
+        BugAiAnalysis response = aiIssueService.generateCodeFix(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/bugs/{id}/ai/suggest-assignee")
+    public ResponseEntity<BugAiAnalysis> suggestAssignee(@PathVariable Long id,
+                                                         @AuthenticationPrincipal UserDetails userDetails) {
+        BugAiAnalysis response = aiIssueService.suggestAssignee(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/bugs/{id}/ai/comments-summary")
+    public ResponseEntity<BugAiAnalysis> summarizeComments(@PathVariable Long id,
+                                                           @AuthenticationPrincipal UserDetails userDetails) {
+        BugAiAnalysis response = aiIssueService.summarizeComments(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/bugs/{id}/ai/test-cases")
+    public ResponseEntity<BugAiAnalysis> generateQaTestCases(@PathVariable Long id,
+                                                             @AuthenticationPrincipal UserDetails userDetails) {
+        BugAiAnalysis response = aiIssueService.generateQaTestCases(id);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/bugs/{id}/ai/duplicates")
     public ResponseEntity<List<DuplicateIssueResponse>> findDuplicates(@PathVariable Long id,
                                                                        @RequestParam Long projectId,

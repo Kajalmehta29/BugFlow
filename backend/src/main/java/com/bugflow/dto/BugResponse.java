@@ -19,6 +19,7 @@ public class BugResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private java.util.List<AttachmentResponse> attachments;
+    private Double similarity;
 
     public BugResponse() {
     }
@@ -172,5 +173,13 @@ public class BugResponse {
 
     public void setAttachments(java.util.List<AttachmentResponse> attachments) {
         this.attachments = attachments;
+    }
+
+    public Double getSimilarity() {
+        return similarity;
+    }
+
+    public void setSimilarity(Double similarity) {
+        this.similarity = similarity;
     }
 }
